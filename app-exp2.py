@@ -1,4 +1,4 @@
-# --- Streamlit App Experiment 2 (Final Clean) ---
+# --- Streamlit App Experiment 2 (Final & Clean) ---
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,12 +19,12 @@ worksheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").w
 st.title("🧪 Eksperimen 2: Evaluasi Palet Bentuk Visualisasi")
 st.info("Pilih kategori (bentuk) yang memiliki rata-rata nilai Y tertinggi dalam scatterplot berikut. Bentuk diambil dari palet tool visualisasi populer.")
 
-# --- Pilihan Palet & Jumlah Kategori ---
+# --- Input Palet & Kategori ---
 available_palets = ["D3", "Tableau", "Excel", "Matlab", "R"]
 selected_palet = st.selectbox("🎨 Pilih palet bentuk:", available_palets)
 n_categories = st.selectbox("🔢 Pilih jumlah kategori:", list(range(2, 11)))
 
-# --- Ambil shape dari folder ---
+# --- Load shape file dari folder ---
 palet_path = f"Shapes-{selected_palet}"
 try:
     shape_files = sorted([f for f in os.listdir(palet_path) if f.endswith(".png")])
@@ -36,22 +36,27 @@ if len(shape_files) < n_categories:
     st.error("Jumlah bentuk dalam palet tidak cukup.")
     st.stop()
 
-# --- Kunci kombinasi palet + kategori
+# --- Tentukan identitas percobaan
 current_key = (selected_palet, n_categories)
 
-# --- Simpan ke session_state hanya jika kondisi berubah
-if "current_key" not in st.session_state or st.session_state.current_key != current_key:
+# --- Cek apakah ini percobaan baru
+if (
+    "selected_shapes" not in st.session_state
+    or "x_data" not in st.session_state
+    or "y_data" not in st.session_state
+    or st.session_state.get("current_key") != current_key
+):
     st.session_state.current_key = current_key
+    st.session_state.selected_shapes = np.random.choice(shape_files, size=n_categories, replace=False)
     st.session_state.x_data = [np.random.uniform(0, 1.5, 20) for _ in range(n_categories)]
     st.session_state.y_data = [np.random.normal(loc=np.random.uniform(0.3, 1.2), scale=0.1, size=20) for _ in range(n_categories)]
-    st.session_state.selected_shapes = np.random.choice(shape_files, size=n_categories, replace=False)
 
 # --- Ambil dari session_state
+selected_shapes = st.session_state.selected_shapes
 x_data = st.session_state.x_data
 y_data = st.session_state.y_data
-selected_shapes = st.session_state.selected_shapes
 
-# --- Plot scatter ---
+# --- Plot scatterplot ---
 fig, ax = plt.subplots()
 for i in range(n_categories):
     shape_path = os.path.join(palet_path, selected_shapes[i])
@@ -72,13 +77,13 @@ ax.set_ylabel("Y")
 ax.legend()
 st.pyplot(fig)
 
-# --- Pilih jawaban ---
+# --- Pilih Jawaban ---
 selected_label = st.selectbox("📍 Pilih kategori dengan rata-rata Y tertinggi:",
                               [f"Kategori {i+1}" for i in range(n_categories)])
 selected_index = int(selected_label.split()[-1]) - 1
 true_idx = int(np.argmax([np.mean(y) for y in y_data]))
 
-# --- Submit
+# --- Submit Jawaban ---
 if st.button("🚀 Submit Jawaban"):
     is_correct = (selected_index == true_idx)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
