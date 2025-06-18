@@ -37,7 +37,9 @@ if len(shape_files) < n_categories:
     st.error("Jumlah bentuk dalam palet tidak cukup.")
     st.stop()
 
-selected_shapes = np.random.choice(shape_files, size=n_categories, replace=False)
+if "selected_shapes" not in st.session_state or st.session_state.get("current_key") != (selected_palet, n_categories):
+    st.session_state.selected_shapes = np.random.choice(shape_files, size=n_categories, replace=False)
+selected_shapes = st.session_state.selected_shapes
 
 # --- Generate Data Titik Scatter ---
 if "scatter_data" not in st.session_state or st.session_state.get("current_key") != (selected_palet, n_categories):
@@ -45,7 +47,7 @@ if "scatter_data" not in st.session_state or st.session_state.get("current_key")
     y_data = [np.random.normal(loc=np.random.uniform(0.3, 1.2), scale=0.1, size=20) for _ in range(n_categories)]
 
     st.session_state.scatter_data = (x_data, y_data)
-    st.session_state.current_key = (selected_palet, n_categories)
+    st.session_state.current_key = (selected_palet, n_categories, "locked")
 
 x_data, y_data = st.session_state.scatter_data
 
