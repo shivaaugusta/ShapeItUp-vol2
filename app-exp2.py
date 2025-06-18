@@ -60,17 +60,17 @@ y_data = st.session_state.y_data
 fig, ax = plt.subplots()
 for i in range(n_categories):
     shape_path = os.path.join(palet_path, selected_shapes[i])
-    if not os.path.exists(shape_path):
-        st.error(f"❌ File tidak ditemukan: {shape_path}")
-        st.stop()
+    label_name = selected_shapes[i].replace(".png", "")
     img = Image.open(shape_path).convert("RGBA").resize((20, 20))
     im = OffsetImage(img, zoom=1.0)
+    
     for x, y in zip(x_data[i], y_data[i]):
         ab = AnnotationBbox(im, (x, y), frameon=False)
         ax.add_artist(ab)
-        label_name = selected_shapes[i].replace(".png", "")
-        ax.scatter([], [], label=f"Kategori {i+1} ({label_name})")
-    
+
+    # ✅ Hanya 1x per kategori (bentuk)
+    ax.scatter([], [], label=f"Kategori {i+1} ({label_name})")
+
 
 ax.set_xlim(-0.1, 1.6)
 ax.set_ylim(-0.1, 1.6)
