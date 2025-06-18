@@ -20,12 +20,12 @@ st.title("🧪 Eksperimen 2: Evaluasi Palet Bentuk Visualisasi")
 st.info("Pilih kategori (bentuk) yang memiliki rata-rata nilai Y tertinggi dalam scatterplot berikut. Bentuk diambil dari palet tool visualisasi populer.")
 
 # --- Pilihan Palet & Jumlah Kategori ---
-available_palets = ["d3", "tableau", "excel", "matlab", "r"]
+available_palets = ["D3", "Tableau", "Excel", "Matlab", "R"]
 selected_palet = st.selectbox("🎨 Pilih palet bentuk (simulasi tool):", available_palets)
 n_categories = st.selectbox("🔢 Pilih jumlah kategori:", list(range(2, 11)))  # 2–10
 
 # --- Load shape files dari folder palet ---
-palet_path = f"shapes_{selected_palet}"
+palet_path = f"Shapes_{selected_palet}"
 try:
     shape_files = sorted([f for f in os.listdir(palet_path) if f.endswith(".png")])
 except FileNotFoundError:
