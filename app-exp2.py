@@ -25,7 +25,7 @@ selected_palet = st.selectbox("🎨 Pilih palet bentuk (simulasi tool):", availa
 n_categories = st.selectbox("🔢 Pilih jumlah kategori:", list(range(2, 11)))  # 2–10
 
 # --- Load shape files dari folder palet ---
-palet_path = f"Shapes_{selected_palet}"
+palet_path = f"Shapes-{selected_palet}"
 try:
     shape_files = sorted([f for f in os.listdir(palet_path) if f.endswith(".png")])
 except FileNotFoundError:
