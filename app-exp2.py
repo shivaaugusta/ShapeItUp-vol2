@@ -68,7 +68,9 @@ for i in range(n_categories):
     for x, y in zip(x_data[i], y_data[i]):
         ab = AnnotationBbox(im, (x, y), frameon=False)
         ax.add_artist(ab)
-    ax.scatter([], [], label=f"Kategori {i+1}")  # dummy legend
+        label_name = selected_shapes[i].replace(".png", "")
+        ax.scatter([], [], label=f"Kategori {i+1} ({label_name})")
+    
 
 ax.set_xlim(-0.1, 1.6)
 ax.set_ylim(-0.1, 1.6)
@@ -78,8 +80,10 @@ ax.legend()
 st.pyplot(fig)
 
 # --- Pilih Jawaban ---
-selected_label = st.selectbox("📍 Pilih kategori dengan rata-rata Y tertinggi:",
-                              [f"Kategori {i+1}" for i in range(n_categories)])
+label_options = [f"Kategori {i+1} ({selected_shapes[i].replace('.png','')})" for i in range(n_categories)]
+selected_label = st.selectbox("📍 Pilih kategori dengan rata-rata Y tertinggi:", label_options)
+selected_index = int(selected_label.split()[1]) - 1
+
 selected_index = int(selected_label.split()[-1]) - 1
 true_idx = int(np.argmax([np.mean(y) for y in y_data]))
 
