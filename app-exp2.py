@@ -19,13 +19,6 @@ worksheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").w
 st.title("🧪 Eksperimen 2: Evaluasi Palet Bentuk Visualisasi")
 st.info("Pilih kategori (bentuk) yang memiliki rata-rata nilai Y tertinggi dalam scatterplot berikut. Bentuk diambil dari palet tool visualisasi populer.")
 
-# --- Pilihan Palet & Jumlah Kategori ---
-available_palets = ["D3", "Tableau", "Excel", "Matlab", "R"]
-selected_palet = st.selectbox("🎨 Pilih palet bentuk (simulasi tool):", available_palets)
-n_categories = st.selectbox("🔢 Pilih jumlah kategori:", list(range(2, 11)))  # 2–10
-
-current_key = (selected_palet, n_categories)
-
 if "current_key" not in st.session_state or st.session_state.current_key != current_key:
     st.session_state.current_key = current_key
     st.session_state.x_data = [np.random.uniform(0, 1.5, 20) for _ in range(n_categories)]
@@ -35,6 +28,13 @@ if "current_key" not in st.session_state or st.session_state.current_key != curr
 x_data = st.session_state.x_data
 y_data = st.session_state.y_data
 selected_shapes = st.session_state.selected_shapes
+
+# --- Pilihan Palet & Jumlah Kategori ---
+available_palets = ["D3", "Tableau", "Excel", "Matlab", "R"]
+selected_palet = st.selectbox("🎨 Pilih palet bentuk (simulasi tool):", available_palets)
+n_categories = st.selectbox("🔢 Pilih jumlah kategori:", list(range(2, 11)))  # 2–10
+
+current_key = (selected_palet, n_categories)
 
 # --- Load shape files dari folder palet ---
 palet_path = f"Shapes-{selected_palet}"
