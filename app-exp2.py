@@ -80,10 +80,10 @@ ax.legend()
 st.pyplot(fig)
 
 # --- Pilih Jawaban ---
-label_options = [f"Kategori {i+1} ({selected_shapes[i].replace('.png','')})" for i in range(n_categories)]
-selected_label = st.selectbox("📍 Pilih kategori dengan rata-rata Y tertinggi:", label_options)
-selected_index = int(selected_label.split()[1]) - 1
+selected_label = st.selectbox("📍 Pilih kategori dengan rata-rata Y tertinggi:",
+                              [f"Kategori {i+1}" for i in range(n_categories)])
 
+selected_index = int(selected_label.split()[1]) - 1
 true_idx = int(np.argmax([np.mean(y) for y in y_data]))
 
 # --- Submit Jawaban ---
