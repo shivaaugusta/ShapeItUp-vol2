@@ -30,7 +30,7 @@ LABEL_MAP = {
     "plus": "plus", "plus-filled": "plus", "plus-unfilled": "plus",
     "cross": "cross", "cross-filled": "cross", "cross-unfilled": "cross",
     "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond",
-    "y": "y", "y-filled": "y-unfilled",
+    "y": "y", "y-filled": "y-filled",
     "minus-open": "minus", "min": "minus",
     "arrow-vertical-open": "arrow", "arrow-horizontal-open": "arrow",
     "hexagon": "hexagon", "pentagon": "pentagon", "triangle-right": "triangle", "triangle-left": "triangle"
