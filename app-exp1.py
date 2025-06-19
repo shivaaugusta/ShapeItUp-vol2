@@ -142,6 +142,8 @@ if st.button("🚀 Submit Jawaban"):
     st.rerun()
 
 # --- Akhir eksperimen ---
-if st.session_state.task_index >= st.session_state.total_tasks:
-    st.success(f"🎉 Semua selesai! Skor akhir eksperimen Anda: {st.session_state.correct} dari 50 soal.")
+if st.session_state.task_index == st.session_state.total_tasks:
+    st.success(f"🎉 Anda telah menyelesaikan semua soal! Total skor eksperimen: {st.session_state.correct} dari 50.")
     st.balloons()
+    st.stop()
+
