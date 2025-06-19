@@ -88,16 +88,23 @@ st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{in
 
 # --- Buat Soal ---
 if f"x_data_{index}" not in st.session_state:
-    combo = random.choice(SHAPE_TYPE_COMBOS)
+    random.shuffle(SHAPE_TYPE_COMBOS)
     valid_shapes = []
-    for shape_path in SHAPE_POOL:
-        raw = os.path.splitext(os.path.basename(shape_path))[0]
-        s_type = SHAPE_TYPE_MAP.get(raw)
-        if s_type in combo:
-            valid_shapes.append(shape_path)
+    combo = None
+    for c in SHAPE_TYPE_COMBOS:
+        shapes = []
+        for shape_path in SHAPE_POOL:
+            raw = os.path.splitext(os.path.basename(shape_path))[0]
+            s_type = SHAPE_TYPE_MAP.get(raw)
+            if s_type in c:
+                shapes.append(shape_path)
+        if len(shapes) >= 10:
+            combo = c
+            valid_shapes = shapes
+            break
 
-    if len(valid_shapes) < 10:
-        st.error("❌ Tidak cukup bentuk untuk kombinasi tipe ini.")
+    if combo is None:
+        st.error("❌ Tidak ada kombinasi tipe bentuk yang cukup. Tambahkan lebih banyak bentuk.")
         st.stop()
 
     N = random.randint(2, min(10, len(valid_shapes)))
