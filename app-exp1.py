@@ -1,4 +1,4 @@
-# --- Streamlit App Experiment 1 (Final Clean Shape) ---
+# --- Streamlit App Experiment 1 (Final + LABEL_MAP + Clean) ---
 import streamlit as st
 import os
 import random
@@ -19,24 +19,42 @@ worksheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").w
 # --- Folder sumber ---
 ROOT_FOLDERS = ["Shapes-D3", "Shapes-Excel", "Shapes-Tableau", "Shapes-Matlab", "Shapes-R"]
 
-# --- Gabungkan dan hilangkan duplikat berdasarkan nama file (dot.png, dst) ---
-def collect_unique_shapes_by_filename():
-    shape_dict = {}  # key: filename (e.g. "dot.png"), value: full path
+# --- Mapping visual identik ---
+LABEL_MAP = {
+    "circle": "circle", "circle-unfilled": "circle", "circle-filled": "circle", "dot": "dot",
+    "square": "square", "square-filled": "square", "square-unfilled": "square", "square-x": "square-x", 
+    "triangle": "triangle", "triangle-up": "triangle", "triangle-filled": "triangle", "triangle-unfilled": "triangle",
+    "triangle-downward": "triangle-down", "downward-triangle-unfilled": "triangle-down", "triangle-down": "triangle-down",
+    "triangle-left": "triangle-left", "triangle-right": "triangle-right",
+    "star": "star", "star-unfilled": "star", "sixlinestar": "star", "star-filled": "star", "eightline-star": "star", 
+    "plus": "plus", "plus-filled": "plus", "plus-unfilled": "plus",
+    "cross": "cross", "cross-filled": "cross", "cross-unfilled": "cross",
+    "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond",
+    "y": "y", "y-filled": "y-unfilled",
+    "minus": "minus", "min": "minus", "horizontal-bar": "minus",
+    "vertical-bar" : "vertical-bar",
+    "hexagon": "hexagon", "pentagon": "pentagon", "triangle-right": "triangle", "triangle-left": "triangle"
+}
+
+# --- Kumpulkan bentuk unik berdasarkan label visual ---
+def collect_unique_shapes_by_label():
+    shape_dict = {}
     for folder in ROOT_FOLDERS:
         if not os.path.exists(folder):
             continue
         for fname in os.listdir(folder):
             if fname.endswith(".png"):
-                label = fname  # bentuk visual
-                full_path = os.path.join(folder, fname)
-                if label not in shape_dict:  # ambil hanya sekali
-                    shape_dict[label] = full_path
-    return list(shape_dict.values())
+                raw_label = os.path.splitext(fname)[0]
+                label = LABEL_MAP.get(raw_label, raw_label)
+                if label not in shape_dict:
+                    shape_dict[label] = os.path.join(folder, fname)
+    return shape_dict
 
-SHAPE_POOL = collect_unique_shapes_by_filename()
+SHAPE_DICT = collect_unique_shapes_by_label()
+SHAPE_POOL = list(SHAPE_DICT.values())
 
 if len(SHAPE_POOL) < 10:
-    st.error("Jumlah bentuk terlalu sedikit. Minimal 10 bentuk unik diperlukan.")
+    st.error("Jumlah bentuk unik terlalu sedikit.")
     st.stop()
 
 # --- Inisialisasi session state ---
@@ -48,23 +66,29 @@ if "task_index" not in st.session_state:
 index = st.session_state.task_index
 mode = "latihan" if index < 3 else "eksperimen"
 
+st.title("🧠 Eksperimen 1: Estimasi Berdasarkan Bentuk")
 if mode == "latihan":
-    st.subheader(f"🧪 Latihan #{index + 1}")
+    st.subheader(f"🔍 Latihan #{index + 1}")
 else:
     st.subheader(f"📊 Eksperimen #{index - 2} dari 50")
 
-# --- Setup data jika belum ada ---
+# --- Setup soal jika belum ada ---
 if f"x_data_{index}" not in st.session_state:
     N = random.randint(2, 10)
     chosen_shapes = random.sample(SHAPE_POOL, N)
 
     means = np.random.uniform(0.3, 1.0, N)
     target_idx = random.randint(0, N - 1)
-    means[target_idx] += 0.3  # Buat 1 bentuk lebih tinggi
+    means[target_idx] += 0.3
 
     x_data = [np.random.uniform(0, 1.5, 20) for _ in range(N)]
     y_data = [np.random.normal(loc=mean, scale=0.05, size=20) for mean in means]
-    shape_labels = [os.path.splitext(os.path.basename(s))[0] for s in chosen_shapes]
+
+    shape_labels = []
+    for shape in chosen_shapes:
+        raw = os.path.splitext(os.path.basename(shape))[0]
+        label = LABEL_MAP.get(raw, raw)
+        shape_labels.append(label)
 
     st.session_state[f"x_data_{index}"] = x_data
     st.session_state[f"y_data_{index}"] = y_data
@@ -72,7 +96,7 @@ if f"x_data_{index}" not in st.session_state:
     st.session_state[f"shape_labels_{index}"] = shape_labels
     st.session_state[f"target_idx_{index}"] = target_idx
 
-# --- Load dari session ---
+# --- Load dari state ---
 x_data = st.session_state[f"x_data_{index}"]
 y_data = st.session_state[f"y_data_{index}"]
 chosen_shapes = st.session_state[f"chosen_shapes_{index}"]
@@ -86,11 +110,10 @@ for i in range(len(chosen_shapes)):
     label = shape_labels[i]
 
     if not os.path.exists(shape_path):
-        st.warning(f"❌ File tidak ditemukan: {shape_path}")
         continue
 
     img = Image.open(shape_path).convert("RGBA").resize((20, 20))
-    im = OffsetImage(img, zoom=1.0, alpha=True)  # transparansi
+    im = OffsetImage(img, zoom=1.0, alpha=True)
     for x, y in zip(x_data[i], y_data[i]):
         ab = AnnotationBbox(im, (x, y), frameon=False)
         ax.add_artist(ab)
@@ -104,13 +127,13 @@ ax.set_ylabel("Y")
 ax.legend()
 st.pyplot(fig)
 
-# --- Pilihan peserta ---
+# --- Pilihan Jawaban ---
 selected_label = st.selectbox("📍 Pilih kategori dengan rata-rata Y tertinggi:",
                               [f"Kategori {i+1} ({label})" for i, label in enumerate(shape_labels)])
 selected_index = int(selected_label.split()[1]) - 1
 true_index = target_idx
 
-# --- Submit jawaban ---
+# --- Submit ---
 if st.button("🚀 Submit Jawaban"):
     benar = selected_index == true_index
     if benar:
@@ -120,7 +143,7 @@ if st.button("🚀 Submit Jawaban"):
         st.error(f"❌ Salah. Jawaban benar: Kategori {true_index+1} ({shape_labels[true_index]})")
 
     if mode == "latihan" and not benar:
-        st.warning("⚠️ Jawaban latihan harus benar untuk lanjut.")
+        st.warning("⚠️ Latihan harus benar untuk lanjut.")
         st.stop()
 
     if mode == "eksperimen":
@@ -137,7 +160,7 @@ if st.button("🚀 Submit Jawaban"):
         try:
             worksheet.append_row(response)
         except Exception as e:
-            st.warning(f"Gagal simpan ke Google Sheets: {e}")
+            st.warning(f"Gagal simpan: {e}")
 
     st.session_state.task_index += 1
     st.rerun()
