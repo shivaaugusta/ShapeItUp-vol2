@@ -78,11 +78,11 @@ if f"x_data_{index}" not in st.session_state:
     chosen_shapes = random.sample(SHAPE_POOL, N)
 
     means = np.random.uniform(0.3, 1.0, N)
-    target_idx = random.randint(0, N - 1)
-    means[target_idx] += 0.3
+    y_data = [np.random.normal(loc=mean, scale=0.05, size=20) for mean in means]
+    target_idx = int(np.argmax([np.mean(y) for y in y_data]))
+
 
     x_data = [np.random.uniform(0, 1.5, 20) for _ in range(N)]
-    y_data = [np.random.normal(loc=mean, scale=0.05, size=20) for mean in means]
 
     shape_labels = []
     for shape in chosen_shapes:
