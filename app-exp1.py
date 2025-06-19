@@ -29,7 +29,7 @@ LABEL_MAP = {
     "star": "star", "star-unfilled": "star", "sixlinestar-open": "star", "star-filled": "star", "eightline-star-open": "star",
     "plus-open": "plus", "plus-filled": "plus", "plus-unfilled": "plus",
     "cross-open": "cross",
-    "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond",
+    "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond", "diamond-plus-open": "diamond",
     "y": "y", "y-filled": "y-filled",
     "minus-open": "minus", "min": "minus",
     "arrow-vertical-open": "arrow", "arrow-horizontal-open": "arrow",
@@ -39,24 +39,21 @@ LABEL_MAP = {
 # --- Mapping shape type ---
 SHAPE_TYPE_MAP = {
     "circle": "filled", "circle-unfilled": "unfilled", "circle-filled": "filled", "dot": "filled",
-    "square-filled": "filled", "square-unfilled": "unfilled", "square-x-open": "open",
-    "triangle-filled": "filled", "triangle-unfilled": "unfilled", "downward-triangle-unfilled": "unfilled",
-    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
-    "star-filled": "filled", "star-unfilled": "unfilled", "sixlinestar-open": "open", "eightline-star-open": "open",
+    "square": "filled", "square-unfilled": "unfilled", "square-x-open": "open",
+    "triangle": "filled", "triangle-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
+    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled",
+    "star": "filled", "star-unfilled": "unfilled", "sixlinestar-open": "open", "eightline-star-open": "open",
     "plus-filled": "filled", "plus-unfilled": "unfilled", "plus-open": "open",
     "cross-open": "open",
-    "diamond-filled": "filled", "diamond-unfilled": "unfilled", "diamond-plus-open": "open",
+    "diamond": "filled", "diamond-filled": "filled", "diamond-unfilled": "unfilled", "diamond-plus-open": "open",
     "y": "filled", "y-filled": "filled",
     "minus-open": "open", "min": "open",
     "arrow-vertical-open": "open", "arrow-horizontal-open": "open",
     "hexagon": "filled", "pentagon": "filled"
 }
 
-SHAPE_TYPE_COMBOS = [
-    ["filled"], ["unfilled"], ["open"],
-    ["filled", "unfilled"], ["filled", "open"], ["unfilled", "open"],
-    ["filled", "unfilled", "open"]
-]
+SHAPE_TYPE_COMBOS_SINGLE = [["filled"], ["unfilled"], ["open"]]
+SHAPE_TYPE_COMBOS_COMBO = [["filled", "unfilled"], ["filled", "open"], ["unfilled", "open"], ["filled", "unfilled", "open"]]
 
 # --- Kumpulkan shape unik ---
 def collect_unique_shapes():
@@ -92,10 +89,15 @@ st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{in
 
 # --- Generate soal ---
 if f"x_data_{index}" not in st.session_state:
-    random.shuffle(SHAPE_TYPE_COMBOS)
+    if 3 <= index < 28:
+        combo_pool = SHAPE_TYPE_COMBOS_SINGLE
+    else:
+        combo_pool = SHAPE_TYPE_COMBOS_COMBO
+
+    random.shuffle(combo_pool)
     valid_shapes = []
     combo = None
-    for c in SHAPE_TYPE_COMBOS:
+    for c in combo_pool:
         shapes = []
         for shape_path in SHAPE_POOL:
             raw = os.path.splitext(os.path.basename(shape_path))[0]
@@ -123,23 +125,17 @@ if f"x_data_{index}" not in st.session_state:
     target_idx = int(np.argmax([np.mean(y) for y in y_data]))
 
     shape_labels = []
-    used_types = set()
     for shape in chosen_shapes:
         raw = os.path.splitext(os.path.basename(shape))[0]
         label = LABEL_MAP.get(raw, raw)
-        s_type = SHAPE_TYPE_MAP.get(raw)
         shape_labels.append(label)
-        if s_type:
-            used_types.add(s_type)
-
-    shape_combo = "+".join(sorted(used_types))
 
     st.session_state[f"x_data_{index}"] = x_data
     st.session_state[f"y_data_{index}"] = y_data
     st.session_state[f"chosen_shapes_{index}"] = chosen_shapes
     st.session_state[f"shape_labels_{index}"] = shape_labels
     st.session_state[f"target_idx_{index}"] = target_idx
-    st.session_state[f"shape_combo_{index}"] = shape_combo
+    st.session_state[f"shape_combo_{index}"] = "+".join(combo)
 
 # --- Load state ---
 x_data = st.session_state[f"x_data_{index}"]
