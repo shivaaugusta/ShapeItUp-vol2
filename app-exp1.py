@@ -41,7 +41,7 @@ SHAPE_TYPE_MAP = {
     "circle": "filled", "circle-unfilled": "unfilled", "circle-filled": "filled", "dot": "filled",
     "square-filled": "filled", "square-unfilled": "unfilled", "square-x-open": "open",
     "triangle-filled": "filled", "triangle-unfilled": "unfilled", "downward-triangle-unfilled": "unfilled",
-    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled",
+    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
     "star-filled": "filled", "star-unfilled": "unfilled", "sixlinestar-open": "open", "eightline-star-open": "open",
     "plus-filled": "filled", "plus-unfilled": "unfilled", "plus-open": "open",
     "cross-open": "open",
@@ -74,7 +74,7 @@ def collect_unique_shapes():
                 if label not in shape_dict:
                     shape_dict[label] = os.path.join(folder, fname)
     if missing_types:
-        st.warning(f"⚠️ ?Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
+        st.warning(f"⚠️ Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
     return list(shape_dict.values())
 
 SHAPE_POOL = collect_unique_shapes()
