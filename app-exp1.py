@@ -80,14 +80,18 @@ target_idx = st.session_state[f"target_idx_{index}"]
 
 # --- Plot scatterplot ---
 fig, ax = plt.subplots()
+fig.patch.set_alpha(0.0)
+ax.set_facecolor("white")  # atau transparent, jika kamu pakai latar khusus
+
 for i in range(len(chosen_shapes)):
     shape_path = chosen_shapes[i]
     label = shape_labels[i]
     if not os.path.exists(shape_path):
         st.warning(f"❌ File tidak ditemukan: {shape_path}")
         continue
-    img = Image.open(shape_path).convert("RGBA").resize((20, 20))
-    im = OffsetImage(img, zoom=1.0)
+    img = Image.open(shape_path).convert("RGBA")
+    img = img.resize((20, 20))
+    im = OffsetImage(img, zoom=1.0, alpha=True)  # <= ini penting
     for x, y in zip(x_data[i], y_data[i]):
         ab = AnnotationBbox(im, (x, y), frameon=False)
         ax.add_artist(ab)
