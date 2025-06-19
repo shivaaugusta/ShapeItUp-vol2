@@ -40,8 +40,8 @@ LABEL_MAP = {
 SHAPE_TYPE_MAP = {
     "circle": "filled", "circle-unfilled": "unfilled", "dot": "filled",
     "square": "filled", "square-unfilled": "unfilled", "square-x-open": "open",
-    "triangle": "filled", "triangle-unfilled": "unfilled",
-    "triangle-downward-unfilled": "unfilled", "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled",
+    "triangle": "filled", "triangle-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
+    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled",
     "star": "filled", "star-unfilled": "unfilled", "sixlinestar-open": "open", "eightline-star-open": "open",
     "plus": "filled", "plus-unfilled": "unfilled",
     "cross": "filled", "cross-unfilled": "unfilled",
@@ -61,6 +61,7 @@ SHAPE_TYPE_COMBOS = [
 # --- Kumpulkan shape unik ---
 def collect_unique_shapes():
     shape_dict = {}
+    missing_types = set()
     for folder in ROOT_FOLDERS:
         if not os.path.exists(folder):
             continue
@@ -68,13 +69,17 @@ def collect_unique_shapes():
             if fname.endswith(".png"):
                 raw = os.path.splitext(fname)[0]
                 label = LABEL_MAP.get(raw, raw)
+                if raw not in SHAPE_TYPE_MAP:
+                    missing_types.add(raw)
                 if label not in shape_dict:
                     shape_dict[label] = os.path.join(folder, fname)
+    if missing_types:
+        st.warning(f"⚠️ Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
     return list(shape_dict.values())
 
 SHAPE_POOL = collect_unique_shapes()
 
-# --- State Init ---
+# --- Inisialisasi state ---
 if "task_index" not in st.session_state:
     st.session_state.task_index = 0
     st.session_state.correct = 0
@@ -82,11 +87,10 @@ if "task_index" not in st.session_state:
 
 index = st.session_state.task_index
 mode = "latihan" if index < 3 else "eksperimen"
-
 st.title("🧠 Eksperimen 1: Estimasi Berdasarkan Bentuk")
 st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{index + 1 if mode == 'latihan' else index - 2 + 1}")
 
-# --- Buat Soal ---
+# --- Generate soal ---
 if f"x_data_{index}" not in st.session_state:
     random.shuffle(SHAPE_TYPE_COMBOS)
     valid_shapes = []
@@ -104,8 +108,12 @@ if f"x_data_{index}" not in st.session_state:
             break
 
     if combo is None:
-        st.error("❌ Tidak ada kombinasi tipe bentuk yang cukup. Tambahkan lebih banyak bentuk.")
-        st.stop()
+        st.warning("🔁 Tidak ada kombinasi ideal. Gunakan fallback filled.")
+        valid_shapes = [s for s in SHAPE_POOL if SHAPE_TYPE_MAP.get(os.path.splitext(os.path.basename(s))[0]) == "filled"]
+        combo = ["filled"]
+        if len(valid_shapes) < 2:
+            st.error("❌ Tidak cukup bentuk untuk eksperimen.")
+            st.stop()
 
     N = random.randint(2, min(10, len(valid_shapes)))
     chosen_shapes = random.sample(valid_shapes, N)
@@ -127,7 +135,7 @@ if f"x_data_{index}" not in st.session_state:
     st.session_state[f"target_idx_{index}"] = target_idx
     st.session_state[f"shape_combo_{index}"] = "+".join(combo)
 
-# --- Load State ---
+# --- Load state ---
 x_data = st.session_state[f"x_data_{index}"]
 y_data = st.session_state[f"y_data_{index}"]
 chosen_shapes = st.session_state[f"chosen_shapes_{index}"]
@@ -164,7 +172,7 @@ if st.button("🚀 Submit Jawaban"):
         st.session_state.correct += 1
         st.success("✅ Jawaban benar!")
     else:
-        st.error(f"❌ Salah. Jawaban benar: Kategori {target_idx+1} ({shape_labels[target_idx]})")
+        st.error(f"❌ Salah. Jawaban: Kategori {target_idx+1} ({shape_labels[target_idx]})")
 
     if mode == "latihan" and not benar:
         st.warning("⚠️ Latihan harus benar untuk lanjut.")
@@ -185,13 +193,13 @@ if st.button("🚀 Submit Jawaban"):
         try:
             worksheet.append_row(row)
         except Exception as e:
-            st.warning(f"Gagal simpan: {e}")
+            st.warning(f"Gagal simpan ke spreadsheet: {e}")
 
     st.session_state.task_index += 1
     st.rerun()
 
-# --- Selesai ---
+# --- Akhiran ---
 if st.session_state.task_index == st.session_state.total_tasks:
-    st.success(f"🎉 Semua soal selesai! Skor akhir Anda: {st.session_state.correct} dari 50.")
+    st.success(f"🎉 Eksperimen selesai! Skor akhir: {st.session_state.correct} dari 50.")
     st.balloons()
     st.stop()
