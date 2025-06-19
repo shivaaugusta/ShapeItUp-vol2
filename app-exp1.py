@@ -29,8 +29,8 @@ LABEL_MAP = {
     "star": "star", "star-unfilled": "star", "sixlinestar-open": "star", "star-filled": "star", "eightline-star-open": "star",
     "plus-open": "plus", "plus-filled": "plus", "plus-unfilled": "plus",
     "cross-open": "cross",
-    "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond",
-    "y": "y", "y-filled": "y-filled",
+    "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond", "diamond-plus-open": "diamond",
+    "y": "y", "y-filled": "y",
     "minus-open": "minus", "min": "minus",
     "arrow-vertical-open": "arrow", "arrow-horizontal-open": "arrow",
     "hexagon": "hexagon", "pentagon": "pentagon", "triangle-right": "triangle", "triangle-left": "triangle"
@@ -41,7 +41,7 @@ SHAPE_TYPE_MAP = {
     "circle": "filled", "circle-unfilled": "unfilled", "circle-filled": "filled", "dot": "filled",
     "square-filled": "filled", "square-unfilled": "unfilled", "square-x-open": "open",
     "triangle-filled": "filled", "triangle-unfilled": "unfilled", "downward-triangle-unfilled": "unfilled",
-    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
+    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled",
     "star-filled": "filled", "star-unfilled": "unfilled", "sixlinestar-open": "open", "eightline-star-open": "open",
     "plus-filled": "filled", "plus-unfilled": "unfilled", "plus-open": "open",
     "cross-open": "open",
@@ -79,6 +79,16 @@ def collect_unique_shapes():
 
 SHAPE_POOL = collect_unique_shapes()
 
+# --- Validasi kombinasi tipe bentuk ---
+def validate_shape_combo(shapes, expected_types):
+    found_types = set()
+    for shape_path in shapes:
+        raw = os.path.splitext(os.path.basename(shape_path))[0]
+        s_type = SHAPE_TYPE_MAP.get(raw)
+        if s_type:
+            found_types.add(s_type)
+    return set(expected_types).issubset(found_types)
+
 # --- Inisialisasi state ---
 if "task_index" not in st.session_state:
     st.session_state.task_index = 0
@@ -93,33 +103,24 @@ st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{in
 # --- Generate soal ---
 if f"x_data_{index}" not in st.session_state:
     random.shuffle(SHAPE_TYPE_COMBOS)
-    valid_shapes = []
     combo = None
+    chosen_shapes = []
     for c in SHAPE_TYPE_COMBOS:
-        shapes = []
-        for shape_path in SHAPE_POOL:
-            raw = os.path.splitext(os.path.basename(shape_path))[0]
-            s_type = SHAPE_TYPE_MAP.get(raw)
-            if s_type in c:
-                shapes.append(shape_path)
-        if len(shapes) >= 10:
-            combo = c
-            valid_shapes = shapes
-            break
+        possible_shapes = [s for s in SHAPE_POOL if SHAPE_TYPE_MAP.get(os.path.splitext(os.path.basename(s))[0]) in c]
+        if len(possible_shapes) >= 10:
+            sample = random.sample(possible_shapes, random.randint(2, min(10, len(possible_shapes))))
+            if validate_shape_combo(sample, c):
+                combo = c
+                chosen_shapes = sample
+                break
 
     if combo is None:
-        st.warning("🔁 Tidak ada kombinasi ideal. Gunakan fallback filled.")
-        valid_shapes = [s for s in SHAPE_POOL if SHAPE_TYPE_MAP.get(os.path.splitext(os.path.basename(s))[0]) == "filled"]
-        combo = ["filled"]
-        if len(valid_shapes) < 2:
-            st.error("❌ Tidak cukup bentuk untuk eksperimen.")
-            st.stop()
+        st.error("❌ Tidak ada kombinasi tipe bentuk yang valid.")
+        st.stop()
 
-    N = random.randint(2, min(10, len(valid_shapes)))
-    chosen_shapes = random.sample(valid_shapes, N)
-    means = np.random.uniform(0.3, 1.0, N)
+    means = np.random.uniform(0.3, 1.0, len(chosen_shapes))
     y_data = [np.random.normal(loc=m, scale=0.05, size=20) for m in means]
-    x_data = [np.random.uniform(0.0, 1.5, 20) for _ in range(N)]
+    x_data = [np.random.uniform(0.0, 1.5, 20) for _ in range(len(chosen_shapes))]
     target_idx = int(np.argmax([np.mean(y) for y in y_data]))
 
     shape_labels = []
