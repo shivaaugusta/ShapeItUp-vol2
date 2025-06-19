@@ -22,17 +22,17 @@ ROOT_FOLDERS = ["Shapes-D3", "Shapes-Excel", "Shapes-Tableau", "Shapes-Matlab", 
 # --- Mapping visual identik ---
 LABEL_MAP = {
     "circle": "circle", "circle-unfilled": "circle", "circle-filled": "circle", "dot": "dot",
-    "square": "square", "square-filled": "square", "square-unfilled": "square", "square-x": "square-x", 
+    "square": "square", "square-filled": "square", "square-unfilled": "square", "square-x-open": "square-x", 
     "triangle": "triangle", "triangle-up": "triangle", "triangle-filled": "triangle", "triangle-unfilled": "triangle",
-    "triangle-downward": "triangle-down", "downward-triangle-unfilled": "triangle-down", "triangle-down": "triangle-down",
-    "triangle-left": "triangle-left", "triangle-right": "triangle-right",
-    "star": "star", "star-unfilled": "star", "sixlinestar": "star", "star-filled": "star", "eightline-star": "star", 
+    "triangle-downward-unfilled": "triangle-down", "downward-triangle-unfilled": "triangle-down", "triangle-down": "triangle-down",
+    "triangle-left-unfilled": "triangle-left", "triangle-right-unfilled": "triangle-right",
+    "star": "star", "star-unfilled": "star", "sixlinestar-open": "star", "star-filled": "star", "eightline-star-open": "star", 
     "plus": "plus", "plus-filled": "plus", "plus-unfilled": "plus",
     "cross": "cross", "cross-filled": "cross", "cross-unfilled": "cross",
     "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond",
     "y": "y", "y-filled": "y-unfilled",
-    "minus": "minus", "min": "minus", "horizontal-bar": "minus",
-    "vertical-bar" : "vertical-bar",
+    "minus-open": "minus", "min": "minus",
+    "arrow-vertical-open" : "arrow", "arrow-horizontal-open": "arrow",
     "hexagon": "hexagon", "pentagon": "pentagon", "triangle-right": "triangle", "triangle-left": "triangle"
 }
 
