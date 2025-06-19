@@ -52,8 +52,11 @@ SHAPE_TYPE_MAP = {
     "hexagon": "filled", "pentagon": "filled"
 }
 
-SHAPE_TYPE_COMBOS_SINGLE = [["filled"], ["unfilled"], ["open"]]
-SHAPE_TYPE_COMBOS_COMBO = [["filled", "unfilled"], ["filled", "open"], ["unfilled", "open"], ["filled", "unfilled", "open"]]
+SHAPE_TYPE_COMBOS = [
+    ["filled"], ["unfilled"], ["open"],
+    ["filled", "unfilled"], ["filled", "open"], ["unfilled", "open"],
+    ["filled", "unfilled", "open"]
+]
 
 # --- Kumpulkan shape unik ---
 def collect_unique_shapes():
@@ -89,15 +92,11 @@ st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{in
 
 # --- Generate soal ---
 if f"x_data_{index}" not in st.session_state:
-    if 3 <= index < 28:
-        combo_pool = SHAPE_TYPE_COMBOS_SINGLE
-    else:
-        combo_pool = SHAPE_TYPE_COMBOS_COMBO
-
-    random.shuffle(combo_pool)
-    valid_shapes = []
-    combo = None
-    for c in combo_pool:
+    is_combo = index >= (st.session_state.total_tasks // 2) + 3
+    combos = [c for c in SHAPE_TYPE_COMBOS if (len(c) == 1) != is_combo]
+    random.shuffle(combos)
+    valid_shapes, combo = [], None
+    for c in combos:
         shapes = []
         for shape_path in SHAPE_POOL:
             raw = os.path.splitext(os.path.basename(shape_path))[0]
@@ -105,17 +104,13 @@ if f"x_data_{index}" not in st.session_state:
             if s_type in c:
                 shapes.append(shape_path)
         if len(shapes) >= 10:
-            combo = c
             valid_shapes = shapes
+            combo = c
             break
 
-    if combo is None:
-        st.warning("🔁 Tidak ada kombinasi ideal. Gunakan fallback filled.")
-        valid_shapes = [s for s in SHAPE_POOL if SHAPE_TYPE_MAP.get(os.path.splitext(os.path.basename(s))[0]) == "filled"]
-        combo = ["filled"]
-        if len(valid_shapes) < 2:
-            st.error("❌ Tidak cukup bentuk untuk eksperimen.")
-            st.stop()
+    if not valid_shapes:
+        st.error("❌ Tidak cukup bentuk untuk eksperimen.")
+        st.stop()
 
     N = random.randint(2, min(10, len(valid_shapes)))
     chosen_shapes = random.sample(valid_shapes, N)
@@ -135,7 +130,7 @@ if f"x_data_{index}" not in st.session_state:
     st.session_state[f"chosen_shapes_{index}"] = chosen_shapes
     st.session_state[f"shape_labels_{index}"] = shape_labels
     st.session_state[f"target_idx_{index}"] = target_idx
-    st.session_state[f"shape_combo_{index}"] = "+".join(combo)
+    st.session_state[f"shape_combo_{index}"] = "+".join(sorted(set(SHAPE_TYPE_MAP.get(os.path.splitext(os.path.basename(s))[0], '') for s in chosen_shapes)))
 
 # --- Load state ---
 x_data = st.session_state[f"x_data_{index}"]
