@@ -74,7 +74,7 @@ def collect_unique_shapes():
                 if label not in shape_dict:
                     shape_dict[label] = os.path.join(folder, fname)
     if missing_types:
-        st.warning(f"⚠️ Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
+        st.warning(f"⚠️ ?Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
     return list(shape_dict.values())
 
 SHAPE_POOL = collect_unique_shapes()
