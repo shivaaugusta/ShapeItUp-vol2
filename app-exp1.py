@@ -38,7 +38,7 @@ LABEL_MAP = {
 
 # --- Mapping shape type ---
 SHAPE_TYPE_MAP = {
-    "circle": "filled", "circle-unfilled": "unfilled", "dot": "filled",
+    "circle": "filled", "circle-unfilled": "unfilled", "circle-filled": "filled", "dot": "filled",
     "square": "filled", "square-unfilled": "unfilled", "square-x-open": "open",
     "triangle": "filled", "triangle-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
     "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled",
