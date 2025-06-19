@@ -74,7 +74,7 @@ def collect_unique_shapes():
                 if label not in shape_dict:
                     shape_dict[label] = os.path.join(folder, fname)
     if missing_types:
-        st.warning(f"⚠️ ?Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
+        st.warning(f"⚠️ Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
     return list(shape_dict.values())
 
 SHAPE_POOL = collect_unique_shapes()
@@ -87,7 +87,7 @@ if "task_index" not in st.session_state:
 
 index = st.session_state.task_index
 mode = "latihan" if index < 3 else "eksperimen"
-st.title("🧠 Eksperimen 1: Estimasi Berdasarkan Bentuk")
+st.title("🧠 ?Eksperimen 1: Estimasi Berdasarkan Bentuk")
 st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{index + 1 if mode == 'latihan' else index - 2 + 1}")
 
 # --- Generate soal ---
