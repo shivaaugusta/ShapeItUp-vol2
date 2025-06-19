@@ -41,7 +41,7 @@ SHAPE_TYPE_MAP = {
     "circle": "filled", "circle-unfilled": "unfilled", "circle-filled": "filled", "dot": "filled",
     "square-filled": "filled", "square-unfilled": "unfilled", "square-x-open": "open",
     "triangle-filled": "filled", "triangle-unfilled": "unfilled", "downward-triangle-unfilled": "unfilled",
-    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled",
+    "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
     "star-filled": "filled", "star-unfilled": "unfilled", "sixlinestar-open": "open", "eightline-star-open": "open",
     "plus-filled": "filled", "plus-unfilled": "unfilled", "plus-open": "open",
     "cross-open": "open",
