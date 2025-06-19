@@ -1,4 +1,4 @@
-# --- Streamlit App Experiment 1 (Latihan + Eksperimen) ---
+# --- Streamlit App Experiment 1 (Final Clean Shape) ---
 import streamlit as st
 import os
 import random
@@ -16,26 +16,27 @@ creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scope
 client = gspread.authorize(creds)
 worksheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").worksheet("Eksperimen_1")
 
-# --- App Title ---
-st.title("🧪 Eksperimen 1: Estimasi Kategori Berdasarkan Bentuk")
-st.caption("Pilih kategori (bentuk) dengan rata-rata Y tertinggi dari scatterplot di bawah.")
+# --- Folder sumber ---
+ROOT_FOLDERS = ["Shapes-D3", "Shapes-Excel", "Shapes-Tableau", "Shapes-Matlab", "Shapes-R"]
 
-# --- Gabungkan semua shape dari 5 folder ---
-ROOT_FOLDERS = ["Shapes-D3", "Shapes-Tableau", "Shapes-Excel", "Shapes-Matlab", "Shapes-R"]
-def collect_all_shapes():
-    all_shapes = []
+# --- Gabungkan dan hilangkan duplikat berdasarkan nama file (dot.png, dst) ---
+def collect_unique_shapes_by_filename():
+    shape_dict = {}  # key: filename (e.g. "dot.png"), value: full path
     for folder in ROOT_FOLDERS:
-        try:
-            files = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".png")]
-            all_shapes.extend(files)
-        except FileNotFoundError:
-            st.warning(f"Folder '{folder}' tidak ditemukan. Lewati.")
-    return sorted(list(set(all_shapes)))  # remove duplicates
+        if not os.path.exists(folder):
+            continue
+        for fname in os.listdir(folder):
+            if fname.endswith(".png"):
+                label = fname  # bentuk visual
+                full_path = os.path.join(folder, fname)
+                if label not in shape_dict:  # ambil hanya sekali
+                    shape_dict[label] = full_path
+    return list(shape_dict.values())
 
-SHAPE_POOL = collect_all_shapes()
+SHAPE_POOL = collect_unique_shapes_by_filename()
 
 if len(SHAPE_POOL) < 10:
-    st.error("Jumlah total shape terlalu sedikit. Pastikan minimal 10 bentuk tersedia.")
+    st.error("Jumlah bentuk terlalu sedikit. Minimal 10 bentuk unik diperlukan.")
     st.stop()
 
 # --- Inisialisasi session state ---
@@ -52,14 +53,14 @@ if mode == "latihan":
 else:
     st.subheader(f"📊 Eksperimen #{index - 2} dari 50")
 
-# --- Setup per task (random shapes & data) ---
+# --- Setup data jika belum ada ---
 if f"x_data_{index}" not in st.session_state:
     N = random.randint(2, 10)
     chosen_shapes = random.sample(SHAPE_POOL, N)
 
     means = np.random.uniform(0.3, 1.0, N)
     target_idx = random.randint(0, N - 1)
-    means[target_idx] += 0.3  # target shape lebih tinggi
+    means[target_idx] += 0.3  # Buat 1 bentuk lebih tinggi
 
     x_data = [np.random.uniform(0, 1.5, 20) for _ in range(N)]
     y_data = [np.random.normal(loc=mean, scale=0.05, size=20) for mean in means]
@@ -71,30 +72,29 @@ if f"x_data_{index}" not in st.session_state:
     st.session_state[f"shape_labels_{index}"] = shape_labels
     st.session_state[f"target_idx_{index}"] = target_idx
 
-# --- Load dari session_state ---
+# --- Load dari session ---
 x_data = st.session_state[f"x_data_{index}"]
 y_data = st.session_state[f"y_data_{index}"]
 chosen_shapes = st.session_state[f"chosen_shapes_{index}"]
 shape_labels = st.session_state[f"shape_labels_{index}"]
 target_idx = st.session_state[f"target_idx_{index}"]
 
-# --- Plot scatterplot ---
+# --- Tampilkan scatterplot ---
 fig, ax = plt.subplots()
-fig.patch.set_alpha(0.0)
-ax.set_facecolor("white")  # atau transparent, jika kamu pakai latar khusus
-
 for i in range(len(chosen_shapes)):
     shape_path = chosen_shapes[i]
     label = shape_labels[i]
+
     if not os.path.exists(shape_path):
         st.warning(f"❌ File tidak ditemukan: {shape_path}")
         continue
-    img = Image.open(shape_path).convert("RGBA")
-    img = img.resize((20, 20))
-    im = OffsetImage(img, zoom=1.0, alpha=True)  # <= ini penting
+
+    img = Image.open(shape_path).convert("RGBA").resize((20, 20))
+    im = OffsetImage(img, zoom=1.0, alpha=True)  # transparansi
     for x, y in zip(x_data[i], y_data[i]):
         ab = AnnotationBbox(im, (x, y), frameon=False)
         ax.add_artist(ab)
+
     ax.scatter([], [], label=f"Kategori {i+1} ({label})")
 
 ax.set_xlim(-0.1, 1.6)
@@ -104,19 +104,20 @@ ax.set_ylabel("Y")
 ax.legend()
 st.pyplot(fig)
 
-# --- Pilih dan submit jawaban ---
+# --- Pilihan peserta ---
 selected_label = st.selectbox("📍 Pilih kategori dengan rata-rata Y tertinggi:",
                               [f"Kategori {i+1} ({label})" for i, label in enumerate(shape_labels)])
 selected_index = int(selected_label.split()[1]) - 1
 true_index = target_idx
 
+# --- Submit jawaban ---
 if st.button("🚀 Submit Jawaban"):
     benar = selected_index == true_index
     if benar:
         st.session_state.correct += 1
         st.success("✅ Jawaban benar!")
     else:
-        st.error(f"❌ Jawaban salah. Yang benar adalah Kategori {true_index+1} ({shape_labels[true_index]})")
+        st.error(f"❌ Salah. Jawaban benar: Kategori {true_index+1} ({shape_labels[true_index]})")
 
     if mode == "latihan" and not benar:
         st.warning("⚠️ Jawaban latihan harus benar untuk lanjut.")
@@ -141,9 +142,8 @@ if st.button("🚀 Submit Jawaban"):
     st.session_state.task_index += 1
     st.rerun()
 
-# --- Akhir eksperimen ---
+# --- Akhiran ---
 if st.session_state.task_index == st.session_state.total_tasks:
-    st.success(f"🎉 Anda telah menyelesaikan semua soal! Total skor eksperimen: {st.session_state.correct} dari 50.")
+    st.success(f"🎉 Semua soal selesai! Skor akhir eksperimen Anda: {st.session_state.correct} dari 50.")
     st.balloons()
     st.stop()
-
