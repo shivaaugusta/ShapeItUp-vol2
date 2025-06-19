@@ -40,7 +40,7 @@ LABEL_MAP = {
 SHAPE_TYPE_MAP = {
     "circle": "filled", "circle-unfilled": "unfilled", "circle-filled": "filled", "dot": "filled",
     "square": "filled", "square-unfilled": "unfilled", "square-x-open": "open", "square-filled": "filled",
-    "triangle": "filled", "triangle-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
+    "triangle-filled": "filled", "triangle-unfilled": "unfilled", "triangle-downward-unfilled": "unfilled",
     "triangle-left-unfilled": "unfilled", "triangle-right-unfilled": "unfilled", "downward-triangle-unfilled": "unfilled",
     "star-filled": "filled", "star-unfilled": "unfilled", "sixlinestar-open": "open", "eightline-star-open": "open",
     "plus-filled": "filled", "plus-unfilled": "unfilled", "plus-open": "open",
