@@ -1,4 +1,4 @@
-# --- Streamlit App Experiment 4: Korelasi Berdasarkan Bentuk ---
+# --- Streamlit App Experiment 4 (Korelasi Pairwise Scatterplot) ---
 import streamlit as st
 import os
 import random
@@ -9,119 +9,107 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
-from scipy.stats import pearsonr
 
-# --- Google Sheets Setup ---
+# --- Setup Google Sheets ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scopes=scope)
 client = gspread.authorize(creds)
 worksheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").worksheet("Eksperimen_4")
 
-# --- Konfigurasi dasar ---
-SHAPE_FOLDER = "Shapes-All"  # folder gabungan dari semua bentuk eksperimen 3
+# --- Folder shape ---
+SHAPE_FOLDER = "Shapes-All"
 
-# --- Ambil semua bentuk yang tersedia ---
-SHAPE_POOL = sorted([f for f in os.listdir(SHAPE_FOLDER) if f.endswith(".png")])
+# --- Mapping label visual ---
+LABEL_MAP = {
+    "circle-filled": "circle", "dot": "dot", "plus-filled": "plus",
+    "diamond-filled": "diamond", "star-filled": "star",
+    "triangle-filled": "triangle", "y-filled": "y", "square-filled": "square",
+    "cross-open": "cross", "minus-open": "minus", "arrow-horizontal-open": "arrow",
+    "square-x-open": "square-x", "eightline-star-open": "star",
+    "triangle-unfilled": "triangle", "diamond-unfilled": "diamond", "triangle-right-unfilled": "triangle",
+    "triangle-left-unfilled": "triangle", "downward-triangle-unfilled": "triangle", "diamond-plus-open": "diamond"
+}
 
-if len(SHAPE_POOL) < 10:
-    st.error("❌ Jumlah bentuk terlalu sedikit. Tambahkan bentuk ke folder Shapes-All.")
-    st.stop()
+# --- Load shapes ---
+def load_shapes():
+    shapes = []
+    for fname in sorted(os.listdir(SHAPE_FOLDER)):
+        if fname.endswith(".png"):
+            raw = os.path.splitext(fname)[0]
+            label = LABEL_MAP.get(raw, raw)
+            shapes.append((label, os.path.join(SHAPE_FOLDER, fname)))
+    return shapes
 
-# --- Inisialisasi state ---
+SHAPES = load_shapes()
+
+# --- Halaman judul ---
+st.title("🔍 Eksperimen 4: Korelasi Berdasarkan Bentuk")
+st.markdown("Pilih **scatterplot** yang menurutmu **paling jelas menunjukkan korelasi antar kategori**.")
+
+# --- Inisialisasi ---
 if "task_index_exp4" not in st.session_state:
-    st.session_state.task_index_exp4 = 0
-    st.session_state.correct_exp4 = 0
-    st.session_state.total_exp4 = 50
+    st.session_state.task_index_exp4 = 1
+    st.session_state.total_tasks_exp4 = 10  # Ubah sesuai jumlah
 
-idx = st.session_state.task_index_exp4
-st.title("🔍 Eksperimen 4: Evaluasi Korelasi Berdasarkan Bentuk")
-st.subheader(f"Soal #{idx + 1} dari {st.session_state.total_exp4}")
+# --- Fungsi untuk generate satu scatterplot ---
+def generate_scatterplot(shape_paths):
+    n = len(shape_paths)
+    base_r = np.random.uniform(0.6, 0.95)  # base correlation
+    data = []
+    for i in range(n):
+        mean_x = np.random.uniform(0.4, 1.0)
+        mean_y = mean_x * base_r + np.random.normal(0, 0.1)
+        x = np.random.normal(mean_x, 0.1, 20)
+        y = mean_y + np.random.normal(0, 0.1, 20)
+        data.append((x, y))
+    return data
 
-# --- Pilih jumlah kategori (misal 2, 4, 6) ---
-n_categories = random.choice([2, 4, 6])
-selected_shapes = random.sample(SHAPE_POOL, n_categories)
-
-# --- Generate 2 set scatterplot: satu berkorelasi tinggi, satu rendah ---
-def generate_correlated_data(n_categories, high_corr=True):
-    x_data = []
-    y_data = []
-    for _ in range(n_categories):
-        x = np.random.normal(0, 1, 20)
-        if high_corr:
-            y = x * np.random.uniform(0.7, 1.0) + np.random.normal(0, 0.2, 20)
-        else:
-            y = np.random.normal(0, 1, 20)
-        x_data.append(x)
-        y_data.append(y)
-    return x_data, y_data
-
-left_is_high = random.choice([True, False])
-left_x, left_y = generate_correlated_data(n_categories, high_corr=left_is_high)
-right_x, right_y = generate_correlated_data(n_categories, high_corr=not left_is_high)
-
-# --- Tampilkan 2 scatterplot berdampingan ---
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("**Diagram Kiri**")
+# --- Buat plot dari data dan shapes ---
+def plot_scatter(shape_paths, data):
     fig, ax = plt.subplots()
-    for i in range(n_categories):
-        shape_path = os.path.join(SHAPE_FOLDER, selected_shapes[i])
-        img = Image.open(shape_path).convert("RGBA").resize((20, 20))
+    for i, (x, y) in enumerate(data):
+        img = Image.open(shape_paths[i]).convert("RGBA").resize((20, 20))
         im = OffsetImage(img, zoom=1.0)
-        for x, y in zip(left_x[i], left_y[i]):
-            ab = AnnotationBbox(im, (x, y), frameon=False)
+        for xi, yi in zip(x, y):
+            ab = AnnotationBbox(im, (xi, yi), frameon=False)
             ax.add_artist(ab)
-    ax.set_xlim(-3, 3)
-    ax.set_ylim(-3, 3)
+    ax.set_xlim(0, 1.5)
+    ax.set_ylim(0, 1.5)
     ax.axis('off')
-    st.pyplot(fig)
+    return fig
+
+# --- Pilih 2 kombinasi shape acak ---
+shapes_A = random.sample(SHAPES, 3)
+shapes_B = random.sample(SHAPES, 3)
+
+labels_A, paths_A = zip(*shapes_A)
+labels_B, paths_B = zip(*shapes_B)
+
+plot_A = generate_scatterplot(paths_A)
+plot_B = generate_scatterplot(paths_B)
+
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("### A")
+    st.pyplot(plot_scatter(paths_A, plot_A))
 
 with col2:
-    st.markdown("**Diagram Kanan**")
-    fig, ax = plt.subplots()
-    for i in range(n_categories):
-        shape_path = os.path.join(SHAPE_FOLDER, selected_shapes[i])
-        img = Image.open(shape_path).convert("RGBA").resize((20, 20))
-        im = OffsetImage(img, zoom=1.0)
-        for x, y in zip(right_x[i], right_y[i]):
-            ab = AnnotationBbox(im, (x, y), frameon=False)
-            ax.add_artist(ab)
-    ax.set_xlim(-3, 3)
-    ax.set_ylim(-3, 3)
-    ax.axis('off')
-    st.pyplot(fig)
+    st.markdown("### B")
+    st.pyplot(plot_scatter(paths_B, plot_B))
 
-# --- Input jawaban ---
-choice = st.radio("📌 Diagram mana yang memiliki korelasi antar kategori lebih tinggi?", ["Kiri", "Kanan"])
+# --- Pilihan user ---
+selected = st.radio("📝 Pilih scatterplot yang paling jelas korelasinya:", ["A", "B"])
 
+# --- Submit ---
 if st.button("🚀 Submit Jawaban"):
-    correct = (choice == "Kiri" and left_is_high) or (choice == "Kanan" and not left_is_high)
-
-    if correct:
-        st.session_state.correct_exp4 += 1
-        st.success("✅ Jawaban benar!")
-    else:
-        st.error("❌ Jawaban salah.")
-
-    # Hitung pearson avg correlation sebagai validasi korelasi
-    def avg_corr(x, y):
-        return np.mean([abs(pearsonr(x[i], y[i])[0]) for i in range(n_categories)])
-
-    row = [
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        idx + 1,
-        n_categories,
-        ", ".join(selected_shapes),
-        "Kiri" if left_is_high else "Kanan",
-        choice,
-        "Benar" if correct else "Salah",
-        round(avg_corr(left_x, left_y), 3),
-        round(avg_corr(right_x, right_y), 3)
-    ]
-
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    row = [timestamp, st.session_state.task_index_exp4, selected,
+           ", ".join(labels_A), ", ".join(labels_B),
+           ", ".join([os.path.basename(p) for p in paths_A]),
+           ", ".join([os.path.basename(p) for p in paths_B])]
     try:
         worksheet.append_row(row)
+        st.success("Jawaban tersimpan.")
     except Exception as e:
         st.warning(f"Gagal menyimpan: {e}")
 
@@ -129,7 +117,7 @@ if st.button("🚀 Submit Jawaban"):
     st.rerun()
 
 # --- Akhiran ---
-if st.session_state.task_index_exp4 == st.session_state.total_exp4:
-    st.success(f"🎉 Eksperimen selesai! Skor akhir Anda: {st.session_state.correct_exp4} dari 50.")
+if st.session_state.task_index_exp4 > st.session_state.total_tasks_exp4:
+    st.success("🎉 Terima kasih! Eksperimen selesai.")
     st.balloons()
     st.stop()
