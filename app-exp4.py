@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Revised Stable Version) ---
+# --- Streamlit App for Experiment 4 (Final: Multi-Shape, Freeze, Guide Lines, Training Mode, Stable) ---
 import streamlit as st
 import os
 import random
@@ -38,13 +38,8 @@ LABEL_MAP = {
 ROOT_FOLDER = "Shapes-All"
 SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
 
-if "step" not in st.session_state:
-    st.session_state.step = 0
-    st.session_state.responses = []
-    st.session_state.saved_data_list = [None] * 54
-
-# Reset after 54 trials
-if st.session_state.step >= 54:
+# --- Init state ---
+if "step" not in st.session_state or st.session_state.step >= 54:
     st.session_state.step = 0
     st.session_state.responses = []
     st.session_state.saved_data_list = [None] * 54
