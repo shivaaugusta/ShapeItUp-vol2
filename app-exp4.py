@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Revised for Multi-Shape per Plot + Logging Shape Info) ---
+# --- Streamlit App for Experiment 4 (Final with Unique Shape Labels) ---
 import streamlit as st
 import os
 import random
@@ -36,8 +36,18 @@ LABEL_MAP = {
 }
 
 ROOT_FOLDER = "Shapes-All"
-SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
+ALL_SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
 
+def get_unique_shape_paths(n):
+    shape_dict = {}
+    for path in ALL_SHAPES:
+        raw = os.path.splitext(os.path.basename(path))[0]
+        label = LABEL_MAP.get(raw)
+        if label and label not in shape_dict:
+            shape_dict[label] = path
+    return random.sample(list(shape_dict.values()), n)
+
+# --- Init session ---
 if "step" not in st.session_state:
     st.session_state.step = 0
     st.session_state.responses = []
@@ -66,9 +76,9 @@ def generate_plot(is_high_corr, shape_paths):
     ax.set_yticks([])
     return fig, shape_paths
 
-# --- Generate two plots ---
-plotA_shapes = random.sample(SHAPES, 3)
-plotB_shapes = random.sample(SHAPES, 3)
+# --- Generate two plots with unique shape labels ---
+plotA_shapes = get_unique_shape_paths(3)
+plotB_shapes = get_unique_shape_paths(3)
 high_corr_plot = random.choice(["A", "B"])
 
 figA, used_shapes_A = generate_plot(is_high_corr=(high_corr_plot == "A"), shape_paths=plotA_shapes)
