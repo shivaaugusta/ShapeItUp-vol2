@@ -67,7 +67,7 @@ correct = st.session_state[f"correct_{index}"]
 
 fig, axs = plt.subplots(1, 2, figsize=(8, 4))
 for ax, data, shape_file, title in zip(axs, [data_left, data_right], [shape_a, shape_b], ["Plot A", "Plot B"]):
-    img = Image.open(os.path.join(SHAPE_FOLDER, shape_file)).convert("RGBA").resize((20, 20))
+    img = Image.open(os.path.join(SHAPE_FOLDER, shape_file)).convert("RGBA").resize((15, 15))
     im = OffsetImage(img, zoom=1)
     for x, y in data:
         ab = AnnotationBbox(im, (x, y), frameon=False)
