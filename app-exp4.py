@@ -121,7 +121,7 @@ def main():
         if st.session_state.step < 0 or st.session_state.step >= TOTAL_TASKS:
             st.error("Invalid step detected. Resetting experiment.")
             st.session_state.clear()
-            st.experimental_rerun()
+            st.rerun()
             return
 
         # Determine current mode
@@ -155,7 +155,7 @@ def main():
         if not isinstance(task_data, dict) or 'high_corr_plot' not in task_data:
             st.error("Invalid task data format. Resetting experiment.")
             st.session_state.clear()
-            st.experimental_rerun()
+            st.rerun()
             return
         
         # Display the two plots
@@ -233,13 +233,13 @@ def main():
             st.session_state.step += 1
             st.session_state.start_time = datetime.now()
             st.session_state.current_seed = random.randint(0, 1000000)
-            st.experimental_rerun()
+            st.rerun()
     
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
         st.error("The experiment will now reset.")
         st.session_state.clear()
-        st.experimental_rerun()
+        st.rerun()
 
 if __name__ == "__main__":
     main()
