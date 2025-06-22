@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Revised for Multi-Shape per Plot) ---
+# --- Streamlit App for Experiment 4 (Revised for Multi-Shape per Plot + Logging Shape Info) ---
 import streamlit as st
 import os
 import random
@@ -44,15 +44,17 @@ if "step" not in st.session_state:
     st.session_state.shuffle_plot = random.choice([True, False])
 
 st.title("🔍 Berdasarkan Bentuk")
-st.subheader(f"Eksperimen #{st.session_state.step + 1}")
+st.subheader(f"Eksperimen #{st.session_state.step + 1} dari 54")
 
 # --- Function to generate one plot ---
 def generate_plot(is_high_corr, shape_paths):
     fig, ax = plt.subplots()
+    all_data = []
     for shape_path in shape_paths:
         mean = np.random.uniform(0.3, 1.2, 2)
         cov = [[0.02, 0.015], [0.015, 0.02]] if is_high_corr else [[0.02, 0], [0, 0.02]]
         data = np.random.multivariate_normal(mean, cov, 20)
+        all_data.extend(data)
         img = Image.open(shape_path).convert("RGBA").resize((20, 20))
         im = OffsetImage(img, zoom=1.0)
         for x, y in data:
@@ -62,15 +64,15 @@ def generate_plot(is_high_corr, shape_paths):
     ax.set_ylim(0, 1.6)
     ax.set_xticks([])
     ax.set_yticks([])
-    return fig
+    return fig, shape_paths
 
 # --- Generate two plots ---
 plotA_shapes = random.sample(SHAPES, 3)
 plotB_shapes = random.sample(SHAPES, 3)
 high_corr_plot = random.choice(["A", "B"])
 
-figA = generate_plot(is_high_corr=(high_corr_plot == "A"), shape_paths=plotA_shapes)
-figB = generate_plot(is_high_corr=(high_corr_plot == "B"), shape_paths=plotB_shapes)
+figA, used_shapes_A = generate_plot(is_high_corr=(high_corr_plot == "A"), shape_paths=plotA_shapes)
+figB, used_shapes_B = generate_plot(is_high_corr=(high_corr_plot == "B"), shape_paths=plotB_shapes)
 
 col1, col2 = st.columns(2)
 with col1:
@@ -81,19 +83,28 @@ with col2:
     st.pyplot(figB)
 
 # --- User Input ---
-choice = st.radio("💡 Pilih plot dengan korelasi lebih tinggi:", ["A", "B"], index=None)
+choice = st.radio("💡 Menurut Anda, plot mana yang lebih berkorelasi?", ["A", "B"], index=None)
 
 if st.button("🚀 Submit Jawaban"):
     if choice:
         benar = choice == high_corr_plot
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        row = [timestamp, st.session_state.step + 1, choice, high_corr_plot, "Benar" if benar else "Salah"]
+        row = [
+            timestamp,
+            st.session_state.step + 1,
+            choice,
+            high_corr_plot,
+            "Benar" if benar else "Salah",
+            ", ".join([os.path.splitext(os.path.basename(p))[0] for p in used_shapes_A]),
+            ", ".join([os.path.splitext(os.path.basename(p))[0] for p in used_shapes_B]),
+            len(used_shapes_A)
+        ]
         try:
             sheet.append_row(row)
         except Exception as e:
             st.warning(f"Gagal menyimpan ke Google Sheets: {e}")
         st.session_state.step += 1
-        st.rerun()
+        st.experimental_rerun()
     else:
         st.warning("❗ Pilih salah satu opsi terlebih dahulu.")
 
