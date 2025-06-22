@@ -114,7 +114,7 @@ def main():
             
             if st.button("Restart Experiment"):
                 st.session_state.clear()
-                st.experimental_rerun()
+                st.rerun()
             return
         
         # Validate current step
