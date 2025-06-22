@@ -109,6 +109,13 @@ def main():
             st.experimental_rerun()
         return
     
+    # SAFETY CHECK - Ensure step is within bounds
+    if st.session_state.step >= len(st.session_state.saved_data):
+        st.error("Invalid step index detected. Resetting experiment.")
+        st.session_state.step = 0
+        st.session_state.saved_data = [None] * TOTAL_TASKS
+        st.experimental_rerun()
+    
     # Determine current mode (training or actual experiment)
     is_training = st.session_state.step < TRAINING_TASKS
     current_mode = "Training" if is_training else "Experiment"
