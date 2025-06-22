@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Final: Multi-Shape, Freeze, Guide Lines, Training Mode, Stable Plot) ---
+# --- Streamlit App for Experiment 4 (Final Fix: Freeze + Guide + Latihan + Stable Plots) ---
 import streamlit as st
 import os
 import random
@@ -38,31 +38,30 @@ LABEL_MAP = {
 ROOT_FOLDER = "Shapes-All"
 SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
 
-TOTAL_TASKS = 54
-
-# --- State Initialization ---
 if "step" not in st.session_state:
     st.session_state.step = 0
-if "saved_data_list" not in st.session_state:
-    st.session_state.saved_data_list = [None] * TOTAL_TASKS
 
-# Reset if done
-if st.session_state.step >= TOTAL_TASKS:
+if "saved_data" not in st.session_state:
+    st.session_state.saved_data = {}
+
+# Reset ulang setelah 54 soal
+if st.session_state.step >= 54:
     st.session_state.step = 0
-    st.session_state.saved_data_list = [None] * TOTAL_TASKS
+    st.session_state.saved_data = {}
 
+TOTAL_TASKS = 54
 MODE = "Latihan" if st.session_state.step < 3 else "Eksperimen"
 st.title("🔍 Berdasarkan Bentuk")
 st.subheader(f"{MODE} #{st.session_state.step + 1} dari {TOTAL_TASKS}")
 
-# --- Freeze Soal Per Step ---
-if st.session_state.saved_data_list[st.session_state.step] is None:
+# --- Freeze soal: hanya generate jika step belum ada ---
+if st.session_state.step not in st.session_state.saved_data:
     plotA_shapes = random.sample(SHAPES, random.randint(2, 4))
     plotB_shapes = random.sample(SHAPES, random.randint(2, 4))
     high_corr_plot = random.choice(["A", "B"])
-    st.session_state.saved_data_list[st.session_state.step] = (plotA_shapes, plotB_shapes, high_corr_plot)
+    st.session_state.saved_data[st.session_state.step] = (plotA_shapes, plotB_shapes, high_corr_plot)
 
-plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data_list[st.session_state.step]
+plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data[st.session_state.step]
 
 # --- Function to generate one plot ---
 def generate_plot(is_high_corr, shape_paths):
@@ -102,6 +101,8 @@ if st.button("🚀 Submit Jawaban"):
     if choice:
         benar = choice == high_corr_plot
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Eksperimen saja yang dicatat
         if MODE == "Eksperimen":
             row = [
                 timestamp,
