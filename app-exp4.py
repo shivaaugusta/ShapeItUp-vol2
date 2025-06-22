@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Final: Multi-Shape, Freeze, Guide Lines, Training Mode, Stable) ---
+# --- Streamlit App for Experiment 4 (Final: Multi-Shape, Freeze, Guide Lines, Training Mode, Stable Plot) ---
 import streamlit as st
 import os
 import random
@@ -38,18 +38,24 @@ LABEL_MAP = {
 ROOT_FOLDER = "Shapes-All"
 SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
 
-# --- Init state ---
-if "step" not in st.session_state or st.session_state.step >= 54:
-    st.session_state.step = 0
-    st.session_state.responses = []
-    st.session_state.saved_data_list = [None] * 54
-
 TOTAL_TASKS = 54
+
+# --- State Initialization ---
+if "step" not in st.session_state:
+    st.session_state.step = 0
+if "saved_data_list" not in st.session_state:
+    st.session_state.saved_data_list = [None] * TOTAL_TASKS
+
+# Reset if done
+if st.session_state.step >= TOTAL_TASKS:
+    st.session_state.step = 0
+    st.session_state.saved_data_list = [None] * TOTAL_TASKS
+
 MODE = "Latihan" if st.session_state.step < 3 else "Eksperimen"
 st.title("🔍 Berdasarkan Bentuk")
 st.subheader(f"{MODE} #{st.session_state.step + 1} dari {TOTAL_TASKS}")
 
-# --- Freeze Soal ---
+# --- Freeze Soal Per Step ---
 if st.session_state.saved_data_list[st.session_state.step] is None:
     plotA_shapes = random.sample(SHAPES, random.randint(2, 4))
     plotB_shapes = random.sample(SHAPES, random.randint(2, 4))
@@ -113,6 +119,6 @@ if st.button("🚀 Submit Jawaban"):
                 st.warning(f"Gagal menyimpan ke Google Sheets: {e}")
 
         st.session_state.step += 1
-        st.rerun()
+        st.experimental_rerun()
     else:
         st.warning("❗️ Pilih salah satu opsi terlebih dahulu.")
