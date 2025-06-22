@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Revised for Multi-Shape per Plot + Logging Shape Info + Freeze + Guide Lines + Training Mode) ---
+# --- Streamlit App for Experiment 4 (Revised Stable Version) ---
 import streamlit as st
 import os
 import random
@@ -41,12 +41,13 @@ SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.end
 if "step" not in st.session_state:
     st.session_state.step = 0
     st.session_state.responses = []
+    st.session_state.saved_data_list = [None] * 54
 
 # Reset after 54 trials
 if st.session_state.step >= 54:
     st.session_state.step = 0
     st.session_state.responses = []
-    st.session_state.saved_data = None
+    st.session_state.saved_data_list = [None] * 54
 
 TOTAL_TASKS = 54
 MODE = "Latihan" if st.session_state.step < 3 else "Eksperimen"
@@ -54,13 +55,13 @@ st.title("🔍 Berdasarkan Bentuk")
 st.subheader(f"{MODE} #{st.session_state.step + 1} dari {TOTAL_TASKS}")
 
 # --- Freeze Soal ---
-if "saved_data" not in st.session_state or st.session_state.saved_data is None:
+if st.session_state.saved_data_list[st.session_state.step] is None:
     plotA_shapes = random.sample(SHAPES, random.randint(2, 4))
     plotB_shapes = random.sample(SHAPES, random.randint(2, 4))
     high_corr_plot = random.choice(["A", "B"])
-    st.session_state.saved_data = (plotA_shapes, plotB_shapes, high_corr_plot)
+    st.session_state.saved_data_list[st.session_state.step] = (plotA_shapes, plotB_shapes, high_corr_plot)
 
-plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data
+plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data_list[st.session_state.step]
 
 # --- Function to generate one plot ---
 def generate_plot(is_high_corr, shape_paths):
@@ -117,7 +118,6 @@ if st.button("🚀 Submit Jawaban"):
                 st.warning(f"Gagal menyimpan ke Google Sheets: {e}")
 
         st.session_state.step += 1
-        st.session_state.saved_data = None
         st.experimental_rerun()
     else:
         st.warning("❗️ Pilih salah satu opsi terlebih dahulu.")
