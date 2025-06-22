@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Final Fix: Freeze + Guide + Latihan + Stable Plots) ---
+# --- Streamlit App for Experiment 4 (Revised + Freeze + Guide Lines + Stable) ---
 import streamlit as st
 import os
 import random
@@ -38,24 +38,25 @@ LABEL_MAP = {
 ROOT_FOLDER = "Shapes-All"
 SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
 
+# --- Inisialisasi session state ---
 if "step" not in st.session_state:
     st.session_state.step = 0
 
 if "saved_data" not in st.session_state:
-    st.session_state.saved_data = {}
+    st.session_state.saved_data = [None] * 54
 
-# Reset ulang setelah 54 soal
+# --- Reset setelah selesai ---
 if st.session_state.step >= 54:
     st.session_state.step = 0
-    st.session_state.saved_data = {}
+    st.session_state.saved_data = [None] * 54
 
 TOTAL_TASKS = 54
 MODE = "Latihan" if st.session_state.step < 3 else "Eksperimen"
 st.title("🔍 Berdasarkan Bentuk")
 st.subheader(f"{MODE} #{st.session_state.step + 1} dari {TOTAL_TASKS}")
 
-# --- Freeze soal: hanya generate jika step belum ada ---
-if st.session_state.step not in st.session_state.saved_data:
+# --- Freeze soal ---
+if st.session_state.saved_data[st.session_state.step] is None:
     plotA_shapes = random.sample(SHAPES, random.randint(2, 4))
     plotB_shapes = random.sample(SHAPES, random.randint(2, 4))
     high_corr_plot = random.choice(["A", "B"])
@@ -63,7 +64,7 @@ if st.session_state.step not in st.session_state.saved_data:
 
 plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data[st.session_state.step]
 
-# --- Function to generate one plot ---
+# --- Generate satu plot ---
 def generate_plot(is_high_corr, shape_paths):
     fig, ax = plt.subplots(figsize=(4, 4))
     for shape_path in shape_paths:
@@ -83,7 +84,7 @@ def generate_plot(is_high_corr, shape_paths):
     ax.set_yticks([])
     return fig
 
-# --- Plot A & B ---
+# --- Tampilkan dua plot ---
 col1, col2 = st.columns(2)
 with col1:
     st.markdown("**Plot A**")
@@ -94,7 +95,7 @@ with col2:
     figB = generate_plot(is_high_corr=(high_corr_plot == "B"), shape_paths=plotB_shapes)
     st.pyplot(figB)
 
-# --- Input ---
+# --- Pilihan user ---
 choice = st.radio("💡 Menurut Anda, plot mana yang lebih berkorelasi?", ["A", "B"], index=None)
 
 if st.button("🚀 Submit Jawaban"):
@@ -102,7 +103,6 @@ if st.button("🚀 Submit Jawaban"):
         benar = choice == high_corr_plot
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Eksperimen saja yang dicatat
         if MODE == "Eksperimen":
             row = [
                 timestamp,
