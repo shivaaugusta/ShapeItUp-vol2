@@ -1,9 +1,9 @@
-# --- Streamlit App Experiment 4 (Correlation Judgement with Multi-Shape) ---
+# --- Eksperimen 4: Pilih Korelasi Tinggi ---
 import streamlit as st
-import os
-import random
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import random
 from PIL import Image
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from datetime import datetime
@@ -16,116 +16,99 @@ creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scope
 client = gspread.authorize(creds)
 worksheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").worksheet("Eksperimen_4")
 
-# --- Settings ---
+# --- Folder shapes ---
 SHAPE_FOLDER = "Shapes-All"
-
-# --- Load shapes ---
-def load_shapes():
-    shapes = []
-    for fname in os.listdir(SHAPE_FOLDER):
-        if fname.endswith(".png"):
-            shapes.append(os.path.join(SHAPE_FOLDER, fname))
-    return shapes
-
-SHAPE_POOL = load_shapes()
-
-if len(SHAPE_POOL) < 10:
-    st.error("❌ Tidak cukup bentuk tersedia.")
-    st.stop()
+shape_files = sorted([f for f in os.listdir(SHAPE_FOLDER) if f.endswith(".png")])
 
 # --- Session Init ---
-if "task_index" not in st.session_state:
-    st.session_state.task_index = 1
-    st.session_state.total_tasks = 54
-    st.session_state.responses = []
+if "exp4_index" not in st.session_state:
+    st.session_state.exp4_index = 0
+    st.session_state.total_exp4 = 57
+    st.session_state.exp4_answers = []
 
-index = st.session_state.task_index
-st.title("📊 Eksperimen 4: Berdasarkan Bentuk")
-st.subheader(f"Eksperimen #{index}")
+index = st.session_state.exp4_index
+mode = "latihan" if index < 3 else "eksperimen"
+st.title("🎯 Eksperimen 4: Berdasarkan Bentuk")
+st.subheader(f"Eksperimen #{index + 1}")
 
-# --- Generate scatterplot ---
-def generate_data(n_categories=3, target_corr=0.8, other_corr=0.2):
-    shapes = random.sample(SHAPE_POOL, n_categories)
-    x1, y1, x2, y2 = [], [], [], []
-    for shape in shapes:
-        # high correlation data (plot A)
-        x = np.random.uniform(0, 1.5, 20)
-        noise = np.random.normal(0, (1 - target_corr) * 0.2, 20)
-        y = x + noise
-        x1.append(x)
-        y1.append(y)
+# --- Generate Soal ---
+if f"x_corr_{index}" not in st.session_state:
+    shape_a, shape_b = random.sample(shape_files, 2)
+    path_a = os.path.join(SHAPE_FOLDER, shape_a)
+    path_b = os.path.join(SHAPE_FOLDER, shape_b)
 
-        # low correlation data (plot B)
-        x_b = np.random.uniform(0, 1.5, 20)
-        noise_b = np.random.normal(0, (1 - other_corr) * 0.6, 20)
-        y_b = x_b + noise_b
-        x2.append(x_b)
-        y2.append(y_b)
+    # Scatterplot A (high correlation)
+    mean = np.random.uniform(0.2, 1.2, 2)
+    cov = [[0.02, 0.018], [0.018, 0.02]]  # high correlation
+    data_a = np.random.multivariate_normal(mean, cov, 30)
 
-    return shapes, (x1, y1), (x2, y2)
+    # Scatterplot B (low correlation)
+    cov = [[0.02, 0.0], [0.0, 0.02]]  # no correlation
+    data_b = np.random.multivariate_normal(mean, cov, 30)
 
-# --- Init question ---
-if f"shapes_{index}" not in st.session_state:
-    N = random.randint(2, 5)
-    shapes, (x1, y1), (x2, y2) = generate_data(n_categories=N)
-    st.session_state[f"shapes_{index}"] = shapes
-    st.session_state[f"x1_{index}"] = x1
-    st.session_state[f"y1_{index}"] = y1
-    st.session_state[f"x2_{index}"] = x2
-    st.session_state[f"y2_{index}"] = y2
+    # Randomize positions
+    if random.random() < 0.5:
+        left_data, right_data = data_a, data_b
+        left_label, right_label = "A", "B"
+        correct = "A"
+    else:
+        left_data, right_data = data_b, data_a
+        left_label, right_label = "A", "B"
+        correct = "B"
 
-shapes = st.session_state[f"shapes_{index}"]
-x1 = st.session_state[f"x1_{index}"]
-y1 = st.session_state[f"y1_{index}"]
-x2 = st.session_state[f"x2_{index}"]
-y2 = st.session_state[f"y2_{index}"]
+    st.session_state[f"shapes_{index}"] = (shape_a, shape_b)
+    st.session_state[f"x_corr_{index}"] = (left_data, right_data)
+    st.session_state[f"correct_{index}"] = correct
 
-# --- Scatterplot A ---
+# --- Plot Scatter ---
+shape_a, shape_b = st.session_state[f"shapes_{index}"]
+data_left, data_right = st.session_state[f"x_corr_{index}"]
+correct = st.session_state[f"correct_{index}"]
+
 fig, axs = plt.subplots(1, 2, figsize=(8, 4))
-for i, shape in enumerate(shapes):
-    img = Image.open(shape).convert("RGBA").resize((15, 15))
-    im = OffsetImage(img, zoom=1.0)
-    for x, y in zip(x1[i], y1[i]):
+for ax, data, shape_file, title in zip(axs, [data_left, data_right], [shape_a, shape_b], ["Plot A", "Plot B"]):
+    img = Image.open(os.path.join(SHAPE_FOLDER, shape_file)).convert("RGBA").resize((20, 20))
+    im = OffsetImage(img, zoom=1)
+    for x, y in data:
         ab = AnnotationBbox(im, (x, y), frameon=False)
-        axs[0].add_artist(ab)
-    axs[0].scatter([], [], label=f"Kategori {i+1}")
-
-    for x, y in zip(x2[i], y2[i]):
-        ab = AnnotationBbox(im, (x, y), frameon=False)
-        axs[1].add_artist(ab)
-    axs[1].scatter([], [], label=f"Kategori {i+1}")
-
-for ax, title in zip(axs, ["Plot A", "Plot B"]):
-    ax.set_xlim(-0.1, 1.6)
-    ax.set_ylim(-0.1, 1.6)
+        ax.add_artist(ab)
+    ax.set_xlim(0, 1.5)
+    ax.set_ylim(0, 1.5)
     ax.set_title(title)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-
+    ax.set_xticks([])
+    ax.set_yticks([])
 st.pyplot(fig)
 
-# --- Input Jawaban ---
-st.markdown("""
-💡 **Pilih plot dengan korelasi lebih tinggi:**
-""")
-choice = st.radio("", ["A", "B"])
+# --- Pilihan Jawaban ---
+st.write("\n")
+selected = st.radio("💡 Pilih plot dengan korelasi lebih tinggi:", ["A", "B"])
 
-# --- Submit ---
+# --- Submit Jawaban ---
 if st.button("🚀 Submit"):
-    correct = (choice == "A")
+    benar = selected == correct
+    st.success("✅ Jawaban berhasil disimpan.")
+
+    # Simpan ke spreadsheet
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    row = [timestamp, index, len(shapes), choice, "Benar" if correct else "Salah", ", ".join([os.path.basename(s) for s in shapes])]
+    row = [
+        timestamp,
+        index + 1,
+        shape_a,
+        shape_b,
+        selected,
+        correct,
+        "Benar" if benar else "Salah"
+    ]
     try:
         worksheet.append_row(row)
-        st.success("✅ Jawaban berhasil disimpan.")
     except Exception as e:
-        st.warning(f"Gagal menyimpan ke Google Sheets: {e}")
+        st.warning(f"Gagal menyimpan: {e}")
 
-    st.session_state.task_index += 1
+    st.session_state.exp4_index += 1
     st.rerun()
 
-# --- Final ---
-if st.session_state.task_index > st.session_state.total_tasks:
+# --- Akhir ---
+if st.session_state.exp4_index == st.session_state.total_exp4:
+    st.success("🎉 Semua soal selesai! Terima kasih telah mengikuti eksperimen.")
     st.balloons()
-    st.success("🎉 Eksperimen selesai!")
     st.stop()
