@@ -20,6 +20,10 @@ SHAPES_FOLDER = "Shapes-All"
 # --- Google Sheets Setup ---
 def init_google_sheets():
     try:
+        if 'google_sheets' not in st.secrets:
+            st.error("Google Sheets credentials not found in secrets!")
+            return None
+            
         scope = ["https://spreadsheets.google.com/feeds", 
                 "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scopes=scope)
@@ -35,50 +39,53 @@ def load_shapes():
         st.error(f"Shape folder '{SHAPES_FOLDER}' not found!")
         return []
     
-    shapes = [os.path.join(SHAPES_FOLDER, f) 
-             for f in os.listdir(SHAPES_FOLDER) 
-             if f.lower().endswith('.png')]
-    
-    if len(shapes) < 4:
-        st.error(f"Need at least 4 shapes in {SHAPES_FOLDER}, found {len(shapes)}")
+    try:
+        shapes = [os.path.join(SHAPES_FOLDER, f) 
+                 for f in os.listdir(SHAPES_FOLDER) 
+                 if f.lower().endswith('.png')]
+        
+        if len(shapes) < 4:
+            st.error(f"Need at least 4 shapes in {SHAPES_FOLDER}, found {len(shapes)}")
+            return []
+        
+        return shapes
+    except Exception as e:
+        st.error(f"Error loading shapes: {str(e)}")
         return []
-    
-    return shapes
 
 # --- Plot Generation ---
 def generate_scatterplot(is_high_corr, shape_paths):
     """Generate a scatterplot with given shapes and correlation level"""
-    fig, ax = plt.subplots(figsize=(4, 4))
-    
-    # Generate data points for each shape
-    for shape_path in shape_paths:
-        mean = np.random.uniform(0.3, 1.2, 2)
+    try:
+        fig, ax = plt.subplots(figsize=(4, 4))
         
-        # Different covariance matrices for high/low correlation
-        if is_high_corr:
-            cov = [[0.02, 0.015], [0.015, 0.02]]  # High correlation
-        else:
-            cov = [[0.02, 0], [0, 0.02]]  # Low correlation
+        for shape_path in shape_paths:
+            mean = np.random.uniform(0.3, 1.2, 2)
             
-        data = np.random.multivariate_normal(mean, cov, 20)
+            if is_high_corr:
+                cov = [[0.02, 0.015], [0.015, 0.02]]  # High correlation
+            else:
+                cov = [[0.02, 0], [0, 0.02]]  # Low correlation
+                
+            data = np.random.multivariate_normal(mean, cov, 20)
+            
+            img = Image.open(shape_path).convert("RGBA").resize((20, 20))
+            im = OffsetImage(img, zoom=1.0)
+            
+            for x, y in data:
+                ab = AnnotationBbox(im, (x, y), frameon=False)
+                ax.add_artist(ab)
         
-        # Load and resize shape image
-        img = Image.open(shape_path).convert("RGBA").resize((20, 20))
-        im = OffsetImage(img, zoom=1.0)
-        
-        # Plot each data point with the shape
-        for x, y in data:
-            ab = AnnotationBbox(im, (x, y), frameon=False)
-            ax.add_artist(ab)
-    
-    # Configure plot appearance
-    ax.set_xlim(0, 1.6)
-    ax.set_ylim(0, 1.6)
-    ax.axhline(0.8, color='gray', linestyle='--', linewidth=0.5)
-    ax.axvline(0.8, color='gray', linestyle='--', linewidth=0.5)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    return fig
+        ax.set_xlim(0, 1.6)
+        ax.set_ylim(0, 1.6)
+        ax.axhline(0.8, color='gray', linestyle='--', linewidth=0.5)
+        ax.axvline(0.8, color='gray', linestyle='--', linewidth=0.5)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        return fig
+    except Exception as e:
+        st.error(f"Error generating plot: {str(e)}")
+        return None
 
 # --- Session State Initialization ---
 def init_session_state():
@@ -87,36 +94,40 @@ def init_session_state():
         st.session_state.saved_data = [None] * TOTAL_TASKS
         st.session_state.start_time = datetime.now()
         st.session_state.responses = []
+        st.session_state.initialized = True
 
 # --- Main App ---
 def main():
-    # Initialize app components
+    # Initialize session state first
+    init_session_state()
+    
+    # Load other components
     sheet = init_google_sheets()
     shapes = load_shapes()
-    init_session_state()
     
     if not shapes:
         st.stop()
-    
+
     # Handle experiment completion
     if st.session_state.step >= TOTAL_TASKS:
         st.balloons()
         st.success("🎉 Experiment completed! Thank you for participating.")
         
         if st.button("Restart Experiment"):
-            st.session_state.step = 0
-            st.session_state.saved_data = [None] * TOTAL_TASKS
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
             st.experimental_rerun()
         return
     
-    # SAFETY CHECK - Ensure step is within bounds
-    if st.session_state.step >= len(st.session_state.saved_data):
+    # Validate step is within bounds
+    if st.session_state.step < 0 or st.session_state.step >= TOTAL_TASKS:
         st.error("Invalid step index detected. Resetting experiment.")
-        st.session_state.step = 0
-        st.session_state.saved_data = [None] * TOTAL_TASKS
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.experimental_rerun()
-    
-    # Determine current mode (training or actual experiment)
+        return
+
+    # Determine current mode
     is_training = st.session_state.step < TRAINING_TASKS
     current_mode = "Training" if is_training else "Experiment"
     
@@ -127,24 +138,41 @@ def main():
     
     # Generate or retrieve current task
     if st.session_state.saved_data[st.session_state.step] is None:
-        plotA_shapes = random.sample(shapes, random.randint(2, 4))
-        plotB_shapes = random.sample(shapes, random.randint(2, 4))
-        high_corr_plot = random.choice(["A", "B"])
-        st.session_state.saved_data[st.session_state.step] = (plotA_shapes, plotB_shapes, high_corr_plot)
+        try:
+            plotA_shapes = random.sample(shapes, random.randint(2, 4))
+            plotB_shapes = random.sample(shapes, random.randint(2, 4))
+            high_corr_plot = random.choice(["A", "B"])
+            st.session_state.saved_data[st.session_state.step] = (plotA_shapes, plotB_shapes, high_corr_plot)
+        except Exception as e:
+            st.error(f"Error generating task: {str(e)}")
+            st.stop()
     
-    plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data[st.session_state.step]
+    try:
+        plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data[st.session_state.step]
+    except (IndexError, TypeError) as e:
+        st.error("Invalid task data detected. Resetting experiment.")
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.experimental_rerun()
+        return
     
     # Display the two plots
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Plot A**")
         figA = generate_scatterplot(high_corr_plot == "A", plotA_shapes)
-        st.pyplot(figA)
-    
+        if figA:
+            st.pyplot(figA)
+        else:
+            st.stop()
+
     with col2:
         st.markdown("**Plot B**")
         figB = generate_scatterplot(high_corr_plot == "B", plotB_shapes)
-        st.pyplot(figB)
+        if figB:
+            st.pyplot(figB)
+        else:
+            st.stop()
     
     # User response
     choice = st.radio("Which plot shows higher correlation?", ["A", "B"], index=None)
@@ -193,7 +221,19 @@ def main():
         # Move to next task
         st.session_state.step += 1
         st.session_state.start_time = datetime.now()
-        st.experimental_rerun()
+        
+        # Use try-except for rerun
+        try:
+            st.experimental_rerun()
+        except:
+            st.rerun()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {str(e)}")
+        st.error("The experiment will now reset.")
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
