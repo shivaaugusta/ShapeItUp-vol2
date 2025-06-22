@@ -20,10 +20,6 @@ SHAPES_FOLDER = "Shapes-All"
 # --- Google Sheets Setup ---
 def init_google_sheets():
     try:
-        if 'google_sheets' not in st.secrets:
-            st.error("Google Sheets credentials not found in secrets!")
-            return None
-            
         scope = ["https://spreadsheets.google.com/feeds", 
                 "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scopes=scope)
@@ -39,53 +35,46 @@ def load_shapes():
         st.error(f"Shape folder '{SHAPES_FOLDER}' not found!")
         return []
     
-    try:
-        shapes = [os.path.join(SHAPES_FOLDER, f) 
-                 for f in os.listdir(SHAPES_FOLDER) 
-                 if f.lower().endswith('.png')]
-        
-        if len(shapes) < 4:
-            st.error(f"Need at least 4 shapes in {SHAPES_FOLDER}, found {len(shapes)}")
-            return []
-        
-        return shapes
-    except Exception as e:
-        st.error(f"Error loading shapes: {str(e)}")
+    shapes = [os.path.join(SHAPES_FOLDER, f) 
+             for f in os.listdir(SHAPES_FOLDER) 
+             if f.lower().endswith('.png')]
+    
+    if len(shapes) < 4:
+        st.error(f"Need at least 4 shapes in {SHAPES_FOLDER}, found {len(shapes)}")
         return []
+    
+    return shapes
 
 # --- Plot Generation ---
-def generate_scatterplot(is_high_corr, shape_paths):
-    """Generate a scatterplot with given shapes and correlation level"""
-    try:
-        fig, ax = plt.subplots(figsize=(4, 4))
+def generate_scatterplot(is_high_corr, shape_paths, seed):
+    """Generate a scatterplot with fixed randomness using seed"""
+    np.random.seed(seed)  # Fix randomness with seed
+    
+    fig, ax = plt.subplots(figsize=(4, 4))
+    for shape_path in shape_paths:
+        mean = np.random.uniform(0.3, 1.2, 2)
         
-        for shape_path in shape_paths:
-            mean = np.random.uniform(0.3, 1.2, 2)
+        if is_high_corr:
+            cov = [[0.02, 0.015], [0.015, 0.02]]
+        else:
+            cov = [[0.02, 0], [0, 0.02]]
             
-            if is_high_corr:
-                cov = [[0.02, 0.015], [0.015, 0.02]]  # High correlation
-            else:
-                cov = [[0.02, 0], [0, 0.02]]  # Low correlation
-                
-            data = np.random.multivariate_normal(mean, cov, 20)
-            
-            img = Image.open(shape_path).convert("RGBA").resize((20, 20))
-            im = OffsetImage(img, zoom=1.0)
-            
-            for x, y in data:
-                ab = AnnotationBbox(im, (x, y), frameon=False)
-                ax.add_artist(ab)
+        data = np.random.multivariate_normal(mean, cov, 20)
         
-        ax.set_xlim(0, 1.6)
-        ax.set_ylim(0, 1.6)
-        ax.axhline(0.8, color='gray', linestyle='--', linewidth=0.5)
-        ax.axvline(0.8, color='gray', linestyle='--', linewidth=0.5)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        return fig
-    except Exception as e:
-        st.error(f"Error generating plot: {str(e)}")
-        return None
+        img = Image.open(shape_path).convert("RGBA").resize((20, 20))
+        im = OffsetImage(img, zoom=1.0)
+        
+        for x, y in data:
+            ab = AnnotationBbox(im, (x, y), frameon=False)
+            ax.add_artist(ab)
+    
+    ax.set_xlim(0, 1.6)
+    ax.set_ylim(0, 1.6)
+    ax.axhline(0.8, color='gray', linestyle='--', linewidth=0.5)
+    ax.axvline(0.8, color='gray', linestyle='--', linewidth=0.5)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    return fig
 
 # --- Session State Initialization ---
 def init_session_state():
@@ -94,7 +83,7 @@ def init_session_state():
         st.session_state.saved_data = [None] * TOTAL_TASKS
         st.session_state.start_time = datetime.now()
         st.session_state.responses = []
-        st.session_state.initialized = True
+        st.session_state.current_seed = random.randint(0, 1000000)
 
 # --- Main App ---
 def main():
@@ -114,19 +103,10 @@ def main():
         st.success("🎉 Experiment completed! Thank you for participating.")
         
         if st.button("Restart Experiment"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
+            st.session_state.clear()
             st.experimental_rerun()
         return
     
-    # Validate step is within bounds
-    if st.session_state.step < 0 or st.session_state.step >= TOTAL_TASKS:
-        st.error("Invalid step index detected. Resetting experiment.")
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.experimental_rerun()
-        return
-
     # Determine current mode
     is_training = st.session_state.step < TRAINING_TASKS
     current_mode = "Training" if is_training else "Experiment"
@@ -136,43 +116,41 @@ def main():
     st.subheader(f"{current_mode} Task {st.session_state.step + 1}/{TOTAL_TASKS}")
     st.progress((st.session_state.step + 1) / TOTAL_TASKS)
     
-    # Generate or retrieve current task
+    # Generate or retrieve current task (with fixed seed)
     if st.session_state.saved_data[st.session_state.step] is None:
-        try:
-            plotA_shapes = random.sample(shapes, random.randint(2, 4))
-            plotB_shapes = random.sample(shapes, random.randint(2, 4))
-            high_corr_plot = random.choice(["A", "B"])
-            st.session_state.saved_data[st.session_state.step] = (plotA_shapes, plotB_shapes, high_corr_plot)
-        except Exception as e:
-            st.error(f"Error generating task: {str(e)}")
-            st.stop()
+        plotA_shapes = random.sample(shapes, random.randint(2, 4))
+        plotB_shapes = random.sample(shapes, random.randint(2, 4))
+        high_corr_plot = random.choice(["A", "B"])
+        plot_seed = st.session_state.current_seed  # Use fixed seed
+        
+        st.session_state.saved_data[st.session_state.step] = {
+            'plotA_shapes': plotA_shapes,
+            'plotB_shapes': plotB_shapes,
+            'high_corr_plot': high_corr_plot,
+            'seed': plot_seed
+        }
     
-    try:
-        plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data[st.session_state.step]
-    except (IndexError, TypeError) as e:
-        st.error("Invalid task data detected. Resetting experiment.")
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.experimental_rerun()
-        return
+    task_data = st.session_state.saved_data[st.session_state.step]
     
-    # Display the two plots
+    # Display the two plots (using fixed seed)
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Plot A**")
-        figA = generate_scatterplot(high_corr_plot == "A", plotA_shapes)
-        if figA:
-            st.pyplot(figA)
-        else:
-            st.stop()
-
+        figA = generate_scatterplot(
+            task_data['high_corr_plot'] == "A", 
+            task_data['plotA_shapes'],
+            task_data['seed']
+        )
+        st.pyplot(figA)
+    
     with col2:
         st.markdown("**Plot B**")
-        figB = generate_scatterplot(high_corr_plot == "B", plotB_shapes)
-        if figB:
-            st.pyplot(figB)
-        else:
-            st.stop()
+        figB = generate_scatterplot(
+            task_data['high_corr_plot'] == "B", 
+            task_data['plotB_shapes'],
+            task_data['seed']
+        )
+        st.pyplot(figB)
     
     # User response
     choice = st.radio("Which plot shows higher correlation?", ["A", "B"], index=None)
@@ -183,7 +161,7 @@ def main():
             return
         
         # Calculate response metrics
-        is_correct = choice == high_corr_plot
+        is_correct = choice == task_data['high_corr_plot']
         response_time = (datetime.now() - st.session_state.start_time).total_seconds()
         
         # Store response
@@ -191,12 +169,13 @@ def main():
             "task_number": st.session_state.step + 1,
             "mode": current_mode,
             "choice": choice,
-            "correct_answer": high_corr_plot,
+            "correct_answer": task_data['high_corr_plot'],
             "is_correct": is_correct,
             "response_time": response_time,
-            "plotA_shapes": [os.path.basename(p) for p in plotA_shapes],
-            "plotB_shapes": [os.path.basename(p) for p in plotB_shapes],
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "plotA_shapes": [os.path.basename(p) for p in task_data['plotA_shapes']],
+            "plotB_shapes": [os.path.basename(p) for p in task_data['plotB_shapes']],
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "seed": task_data['seed']  # Store seed for reproducibility
         }
         
         # Save to Google Sheets (only for actual experiment)
@@ -214,26 +193,15 @@ def main():
             if is_correct:
                 st.success("✅ Correct! This is a training example.")
             else:
-                st.error(f"❌ Not quite right. The correct answer was {high_corr_plot}.")
+                st.error(f"❌ Not quite right. The correct answer was {task_data['high_corr_plot']}.")
             
             st.info("This was a training example. The actual experiment will begin next.")
         
-        # Move to next task
+        # Move to next task with new seed
         st.session_state.step += 1
         st.session_state.start_time = datetime.now()
-        
-        # Use try-except for rerun
-        try:
-            st.experimental_rerun()
-        except:
-            st.rerun()
+        st.session_state.current_seed = random.randint(0, 1000000)
+        st.experimental_rerun()
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        st.error(f"An unexpected error occurred: {str(e)}")
-        st.error("The experiment will now reset.")
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    main()
