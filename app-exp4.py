@@ -1,4 +1,4 @@
-# --- Streamlit App Experiment 4 ---
+# --- Streamlit App for Experiment 4 (Revised for Multi-Shape per Plot) ---
 import streamlit as st
 import os
 import random
@@ -16,97 +16,87 @@ creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scope
 client = gspread.authorize(creds)
 sheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").worksheet("Eksperimen_4")
 
-# --- Folder sumber ---
-SHAPE_FOLDER = "Shapes-All"
-SHAPE_FILES = [f for f in os.listdir(SHAPE_FOLDER) if f.endswith(".png")]
+# --- Config ---
+st.set_page_config(page_title="Eksperimen 4", layout="wide")
 
-# --- Session State Init ---
+LABEL_MAP = {
+    "circle": "circle", "circle-unfilled": "circle", "circle-filled": "circle", "dot": "dot",
+    "square": "square", "square-filled": "square", "square-unfilled": "square", "square-x-open": "square-x",
+    "triangle": "triangle", "triangle-up": "triangle", "triangle-filled": "triangle", "triangle-unfilled": "triangle",
+    "triangle-downward-unfilled": "triangle-down", "downward-triangle-unfilled": "triangle-down", "triangle-down": "triangle-down",
+    "triangle-left-unfilled": "triangle-left", "triangle-right-unfilled": "triangle-right",
+    "star": "star", "star-unfilled": "star", "sixlinestar-open": "star", "star-filled": "star", "eightline-star-open": "star",
+    "plus-open": "plus", "plus-filled": "plus", "plus-unfilled": "plus",
+    "cross-open": "cross",
+    "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond", "diamond-plus-open": "diamond",
+    "y": "y", "y-filled": "y-filled",
+    "minus-open": "minus", "min": "minus",
+    "arrow-vertical-open": "arrow", "arrow-horizontal-open": "arrow",
+    "hexagon": "hexagon", "pentagon": "pentagon", "triangle-right": "triangle", "triangle-left": "triangle"
+}
+
+ROOT_FOLDER = "Shapes-All"
+SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
+
 if "step" not in st.session_state:
     st.session_state.step = 0
-    st.session_state.score = 0
-    st.session_state.total = 54
+    st.session_state.responses = []
+    st.session_state.shuffle_plot = random.choice([True, False])
 
-# --- Header ---
-st.title("📊 Eksperimen 4: Korelasi Berdasarkan Bentuk")
-st.markdown(f"### Soal #{st.session_state.step + 1} dari {st.session_state.total}")
+st.title("🔍 Berdasarkan Bentuk")
+st.subheader(f"Eksperimen #{st.session_state.step + 1}")
 
-# --- Generate Data ---
-def generate_scatter_data(corr):
-    x = np.random.uniform(0, 1.5, 30)
-    noise = np.random.normal(0, 0.1, 30)
-    if corr:
-        y = x + noise
-    else:
-        y = np.random.uniform(0, 1.5, 30)
-    return x, y
-
-# --- Generate Shapes ---
-def sample_shapes(n):
-    return random.sample(SHAPE_FILES, n)
-
-# --- Scatterplot Builder ---
-def build_plot(ax, shapes, xs, ys):
-    for shape_file, x_data, y_data in zip(shapes, xs, ys):
-        img_path = os.path.join(SHAPE_FOLDER, shape_file)
-        img = Image.open(img_path).convert("RGBA").resize((20, 20))
+# --- Function to generate one plot ---
+def generate_plot(is_high_corr, shape_paths):
+    fig, ax = plt.subplots()
+    for shape_path in shape_paths:
+        mean = np.random.uniform(0.3, 1.2, 2)
+        cov = [[0.02, 0.015], [0.015, 0.02]] if is_high_corr else [[0.02, 0], [0, 0.02]]
+        data = np.random.multivariate_normal(mean, cov, 20)
+        img = Image.open(shape_path).convert("RGBA").resize((20, 20))
         im = OffsetImage(img, zoom=1.0)
-        for x, y in zip(x_data, y_data):
+        for x, y in data:
             ab = AnnotationBbox(im, (x, y), frameon=False)
             ax.add_artist(ab)
-    ax.set_xlim(-0.1, 1.6)
-    ax.set_ylim(-0.1, 1.6)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.set_xlim(0, 1.6)
+    ax.set_ylim(0, 1.6)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    return fig
 
-# --- Soal Baru ---
-if f"data_{st.session_state.step}" not in st.session_state:
-    corr_high = generate_scatter_data(True)
-    corr_low = generate_scatter_data(False)
+# --- Generate two plots ---
+plotA_shapes = random.sample(SHAPES, 3)
+plotB_shapes = random.sample(SHAPES, 3)
+high_corr_plot = random.choice(["A", "B"])
 
-    shapes_high = sample_shapes(1)
-    shapes_low = sample_shapes(1)
+figA = generate_plot(is_high_corr=(high_corr_plot == "A"), shape_paths=plotA_shapes)
+figB = generate_plot(is_high_corr=(high_corr_plot == "B"), shape_paths=plotB_shapes)
 
-    if random.random() < 0.5:
-        order = "AB"
-        st.session_state[f"data_{st.session_state.step}"] = (corr_high, shapes_high, corr_low, shapes_low, "A")
-    else:
-        order = "BA"
-        st.session_state[f"data_{st.session_state.step}"] = (corr_low, shapes_low, corr_high, shapes_high, "B")
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("**Plot A**")
+    st.pyplot(figA)
+with col2:
+    st.markdown("**Plot B**")
+    st.pyplot(figB)
 
-# --- Load Data ---
-data = st.session_state[f"data_{st.session_state.step}"]
-fig, axs = plt.subplots(1, 2, figsize=(10, 4))
-
-build_plot(axs[0], data[1], [data[0][0]], [data[0][1]])
-axs[0].set_title("Plot A")
-
-build_plot(axs[1], data[3], [data[2][0]], [data[2][1]])
-axs[1].set_title("Plot B")
-
-st.pyplot(fig)
-
-# --- Pilihan ---
-choice = st.radio("💡 Pilih plot dengan korelasi lebih tinggi:", ["A", "B"])
+# --- User Input ---
+choice = st.radio("💡 Pilih plot dengan korelasi lebih tinggi:", ["A", "B"], index=None)
 
 if st.button("🚀 Submit Jawaban"):
-    correct = data[4]
-    is_correct = (choice == correct)
-    if is_correct:
-        st.session_state.score += 1
+    if choice:
+        benar = choice == high_corr_plot
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        row = [timestamp, st.session_state.step + 1, choice, high_corr_plot, "Benar" if benar else "Salah"]
+        try:
+            sheet.append_row(row)
+        except Exception as e:
+            st.warning(f"Gagal menyimpan ke Google Sheets: {e}")
+        st.session_state.step += 1
+        st.experimental_rerun()
+    else:
+        st.warning("❗ Pilih salah satu opsi terlebih dahulu.")
 
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    row = [timestamp, st.session_state.step + 1, choice, correct, "Benar" if is_correct else "Salah"]
-    try:
-        sheet.append_row(row)
-    except Exception as e:
-        st.warning(f"Gagal menyimpan ke spreadsheet: {e}")
-
-    st.session_state.step += 1
-    st.rerun()
-
-# --- Selesai ---
-if st.session_state.step == st.session_state.total:
-    st.success(f"🎉 Eksperimen selesai! Skor akhir Anda: {st.session_state.score} dari {st.session_state.total}.")
-    st.balloons()
+if st.session_state.step >= 54:
+    st.success("✅ Eksperimen selesai! Terima kasih atas partisipasinya.")
     st.stop()
