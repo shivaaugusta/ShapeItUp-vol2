@@ -1,4 +1,4 @@
-# --- Streamlit App Experiment 4: Correlation Judgement with Randomized Position ---
+# --- Streamlit App Experiment 4 (Revised with Random A/B) ---
 import streamlit as st
 import os
 import random
@@ -10,113 +10,119 @@ from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- Setup Spreadsheet ---
+# --- Google Sheets Setup ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scopes=scope)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").worksheet("Eksperimen_4")
 
-# --- Setup Shape Folder ---
+# --- Folder with Shapes ---
 SHAPE_FOLDER = "Shapes-All"
-SHAPE_POOL = [f for f in os.listdir(SHAPE_FOLDER) if f.endswith(".png")]
+SHAPE_LIST = sorted([f for f in os.listdir(SHAPE_FOLDER) if f.endswith(".png")])
 
-if len(SHAPE_POOL) < 10:
-    st.error("❌ Tidak cukup bentuk dalam folder Shapes-All.")
-    st.stop()
+# --- Session Setup ---
+if "trial_index" not in st.session_state:
+    st.session_state.trial_index = 1
+    st.session_state.total_trials = 54
+    st.session_state.correct_count = 0
 
-# --- State Init ---
-if "exp4_index" not in st.session_state:
-    st.session_state.exp4_index = 1
-    st.session_state.total_trials = 30  # bisa diganti jumlah soal
+index = st.session_state.trial_index
 
-index = st.session_state.exp4_index
+st.title("🔍 Eksperimen 4: Korelasi Bentuk")
+st.subheader(f"Soal #{index} dari {st.session_state.total_trials}")
 
-st.title("📊 Berdasarkan Bentuk")
-st.subheader(f"Eksperimen #{index}")
+# --- Generate Scatterplots ---
+def generate_scatter(corr, shape_name):
+    cov = [[1, corr], [corr, 1]]
+    data = np.random.multivariate_normal([0.75, 0.75], cov, 60)
+    x_vals, y_vals = data[:, 0], data[:, 1]
+    img = Image.open(os.path.join(SHAPE_FOLDER, shape_name)).convert("RGBA").resize((20, 20))
+    return x_vals, y_vals, img
 
-# --- Generate Soal Baru ---
-if f"scatter_left_{index}" not in st.session_state:
-    N = random.randint(2, 5)
-    chosen_shapes = random.sample(SHAPE_POOL, N)
+# --- Generate Task ---
+if f"scatter_A_{index}" not in st.session_state:
+    # Ambil dua bentuk acak
+    shape_high, shape_low = random.sample(SHAPE_LIST, 2)
 
-    # --- Data Plot A (korelasi tinggi) ---
-    x_a = np.random.uniform(0, 1.5, 20)
-    noise = np.random.normal(0, 0.05, 20)
-    y_a = x_a + noise
-    shape_a = random.choice(chosen_shapes)
+    # Generate scatterplot dengan korelasi tinggi dan rendah
+    x_high, y_high, img_high = generate_scatter(0.9, shape_high)
+    x_low, y_low, img_low = generate_scatter(0.2, shape_low)
 
-    # --- Data Plot B (acak / korelasi rendah) ---
-    x_b = np.random.uniform(0, 1.5, 20)
-    y_b = np.random.uniform(0, 1.5, 20)
-    shape_b = random.choice(chosen_shapes)
+    # Acak penempatan target di A atau B
+    target_in_A = random.choice([True, False])
 
-    # --- Acak Posisi A/B ---
-    if random.choice([True, False]):
-        st.session_state[f"scatter_left_{index}"] = (x_a, y_a, shape_a)
-        st.session_state[f"scatter_right_{index}"] = (x_b, y_b, shape_b)
+    if target_in_A:
+        x_A, y_A, img_A = x_high, y_high, img_high
+        x_B, y_B, img_B = x_low, y_low, img_low
         st.session_state[f"correct_{index}"] = "A"
     else:
-        st.session_state[f"scatter_left_{index}"] = (x_b, y_b, shape_b)
-        st.session_state[f"scatter_right_{index}"] = (x_a, y_a, shape_a)
+        x_A, y_A, img_A = x_low, y_low, img_low
+        x_B, y_B, img_B = x_high, y_high, img_high
         st.session_state[f"correct_{index}"] = "B"
 
-# --- Ambil State ---
-x_l, y_l, shape_l = st.session_state[f"scatter_left_{index}"]
-x_r, y_r, shape_r = st.session_state[f"scatter_right_{index}"]
-correct = st.session_state[f"correct_{index}"]
+    st.session_state[f"scatter_A_{index}"] = (x_A, y_A, img_A)
+    st.session_state[f"scatter_B_{index}"] = (x_B, y_B, img_B)
+    st.session_state[f"shapes_{index}"] = (shape_high, shape_low)
 
-# --- Visualisasi ---
+# --- Load state ---
+x_A, y_A, img_A = st.session_state[f"scatter_A_{index}"]
+x_B, y_B, img_B = st.session_state[f"scatter_B_{index}"]
+shape_high, shape_low = st.session_state[f"shapes_{index}"]
+
+# --- Display plots ---
 col1, col2 = st.columns(2)
-
 with col1:
-    st.markdown("**Plot A**")
-    fig_a, ax_a = plt.subplots()
-    img = Image.open(os.path.join(SHAPE_FOLDER, shape_l)).convert("RGBA").resize((20, 20))
-    im = OffsetImage(img, zoom=1.0)
-    for x, y in zip(x_l, y_l):
-        ab = AnnotationBbox(im, (x, y), frameon=False)
-        ax_a.add_artist(ab)
-    ax_a.set_xlim(0, 1.6)
-    ax_a.set_ylim(0, 1.6)
-    ax_a.set_xlabel("X")
-    ax_a.set_ylabel("Y")
-    st.pyplot(fig_a)
+    figA, axA = plt.subplots()
+    for x, y in zip(x_A, y_A):
+        ab = AnnotationBbox(OffsetImage(img_A, zoom=1.0), (x, y), frameon=False)
+        axA.add_artist(ab)
+    axA.set_xlim(-0.5, 2)
+    axA.set_ylim(-0.5, 2)
+    axA.set_title("Plot A")
+    axA.axis("off")
+    st.pyplot(figA)
 
 with col2:
-    st.markdown("**Plot B**")
-    fig_b, ax_b = plt.subplots()
-    img = Image.open(os.path.join(SHAPE_FOLDER, shape_r)).convert("RGBA").resize((20, 20))
-    im = OffsetImage(img, zoom=1.0)
-    for x, y in zip(x_r, y_r):
-        ab = AnnotationBbox(im, (x, y), frameon=False)
-        ax_b.add_artist(ab)
-    ax_b.set_xlim(0, 1.6)
-    ax_b.set_ylim(0, 1.6)
-    ax_b.set_xlabel("X")
-    ax_b.set_ylabel("Y")
-    st.pyplot(fig_b)
+    figB, axB = plt.subplots()
+    for x, y in zip(x_B, y_B):
+        ab = AnnotationBbox(OffsetImage(img_B, zoom=1.0), (x, y), frameon=False)
+        axB.add_artist(ab)
+    axB.set_xlim(-0.5, 2)
+    axB.set_ylim(-0.5, 2)
+    axB.set_title("Plot B")
+    axB.axis("off")
+    st.pyplot(figB)
 
-# --- Input Jawaban ---
-st.markdown("### 💡 Pilih plot dengan korelasi lebih tinggi:")
-selected = st.radio("", ["A", "B"])
+# --- Input ---
+answer = st.radio("📍 Menurut Anda, plot mana yang lebih berkorelasi?", ["A", "B"])
 
 # --- Submit ---
-if st.button("🚀 Submit"):
-    benar = selected == correct
-    st.success("✅ Jawaban berhasil disimpan.")
+if st.button("🚀 Submit Jawaban"):
+    correct = st.session_state[f"correct_{index}"]
+    benar = answer == correct
+
+    if benar:
+        st.session_state.correct_count += 1
+        st.success("✅ Jawaban benar!")
+    else:
+        st.error(f"❌ Jawaban salah. Yang benar: {correct}")
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    row = [timestamp, index, selected, correct, "Benar" if benar else "Salah", shape_l, shape_r]
+    row = [
+        timestamp, index, shape_high, shape_low, answer, correct,
+        "Benar" if benar else "Salah"
+    ]
 
     try:
         sheet.append_row(row)
     except Exception as e:
-        st.warning(f"Gagal simpan: {e}")
+        st.warning(f"Gagal simpan ke spreadsheet: {e}")
 
-    st.session_state.exp4_index += 1
+    st.session_state.trial_index += 1
     st.rerun()
 
-# --- Akhir ---
-if st.session_state.exp4_index > st.session_state.total_trials:
-    st.success("🎉 Eksperimen selesai! Terima kasih telah berpartisipasi.")
+# --- Final ---
+if st.session_state.trial_index > st.session_state.total_trials:
+    st.success(f"🎉 Eksperimen selesai. Skor Anda: {st.session_state.correct_count} dari {st.session_state.total_trials}")
+    st.balloons()
     st.stop()
