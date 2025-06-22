@@ -38,6 +38,11 @@ LABEL_MAP = {
 ROOT_FOLDER = "Shapes-All"
 SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
 
+# --- Validate shape count ---
+if len(SHAPES) < 4:
+    st.error("❌ Tidak cukup gambar bentuk (.png) di folder 'Shapes-All'. Minimal 4 bentuk diperlukan.")
+    st.stop()
+
 TOTAL_TASKS = 54
 
 if "step" not in st.session_state:
