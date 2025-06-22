@@ -93,7 +93,7 @@ if st.button("🚀 Submit Jawaban"):
         except Exception as e:
             st.warning(f"Gagal menyimpan ke Google Sheets: {e}")
         st.session_state.step += 1
-        st.experimental_rerun()
+        st.rerun()
     else:
         st.warning("❗ Pilih salah satu opsi terlebih dahulu.")
 
