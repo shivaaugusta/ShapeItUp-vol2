@@ -1,4 +1,3 @@
-# --- Streamlit App for Experiment 4 (Stable + Freeze + Guide Lines + Training Mode) ---
 import streamlit as st
 import os
 import random
@@ -10,76 +9,69 @@ from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- Google Sheets Setup ---
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scopes=scope)
-client = gspread.authorize(creds)
-sheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").worksheet("Eksperimen_4")
+# --- Configuration ---
+st.set_page_config(page_title="Shape Correlation Experiment", layout="wide")
 
-# --- Config ---
-st.set_page_config(page_title="Eksperimen 4", layout="wide")
-
-LABEL_MAP = {
-    "circle": "circle", "circle-unfilled": "circle", "circle-filled": "circle", "dot": "dot",
-    "square": "square", "square-filled": "square", "square-unfilled": "square", "square-x-open": "square-x",
-    "triangle": "triangle", "triangle-up": "triangle", "triangle-filled": "triangle", "triangle-unfilled": "triangle",
-    "triangle-downward-unfilled": "triangle-down", "downward-triangle-unfilled": "triangle-down", "triangle-down": "triangle-down",
-    "triangle-left-unfilled": "triangle-left", "triangle-right-unfilled": "triangle-right",
-    "star": "star", "star-unfilled": "star", "sixlinestar-open": "star", "star-filled": "star", "eightline-star-open": "star",
-    "plus-open": "plus", "plus-filled": "plus", "plus-unfilled": "plus",
-    "cross-open": "cross",
-    "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond", "diamond-plus-open": "diamond",
-    "y": "y", "y-filled": "y-filled",
-    "minus-open": "minus", "min": "minus",
-    "arrow-vertical-open": "arrow", "arrow-horizontal-open": "arrow",
-    "hexagon": "hexagon", "pentagon": "pentagon", "triangle-right": "triangle", "triangle-left": "triangle"
-}
-
-ROOT_FOLDER = "Shapes-All"
-SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
-
-# --- Validate shape count ---
-if len(SHAPES) < 4:
-    st.error("❌ Tidak cukup gambar bentuk (.png) di folder 'Shapes-All'. Minimal 4 bentuk diperlukan.")
-    st.stop()
-
+# --- Constants ---
 TOTAL_TASKS = 54
+TRAINING_TASKS = 3
+SHAPES_FOLDER = "Shapes-All"
 
-if "step" not in st.session_state:
-    st.session_state.step = 0
-if "saved_data" not in st.session_state:
-    st.session_state.saved_data = [None] * TOTAL_TASKS
+# --- Google Sheets Setup ---
+def init_google_sheets():
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", 
+                "https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_info(st.secrets["google_sheets"], scopes=scope)
+        client = gspread.authorize(creds)
+        return client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").worksheet("Eksperimen_4")
+    except Exception as e:
+        st.error(f"Failed to connect to Google Sheets: {str(e)}")
+        return None
 
-# Reset after 54
-if st.session_state.step >= TOTAL_TASKS:
-    st.session_state.step = 0
-    st.session_state.saved_data = [None] * TOTAL_TASKS
+# --- Shape Management ---
+def load_shapes():
+    if not os.path.exists(SHAPES_FOLDER):
+        st.error(f"Shape folder '{SHAPES_FOLDER}' not found!")
+        return []
+    
+    shapes = [os.path.join(SHAPES_FOLDER, f) 
+             for f in os.listdir(SHAPES_FOLDER) 
+             if f.lower().endswith('.png')]
+    
+    if len(shapes) < 4:
+        st.error(f"Need at least 4 shapes in {SHAPES_FOLDER}, found {len(shapes)}")
+        return []
+    
+    return shapes
 
-MODE = "Latihan" if st.session_state.step < 3 else "Eksperimen"
-st.title("🔍 Berdasarkan Bentuk")
-st.subheader(f"{MODE} #{st.session_state.step + 1} dari {TOTAL_TASKS}")
-
-# --- Freeze Soal ---
-if st.session_state.saved_data[st.session_state.step] is None:
-    plotA_shapes = random.sample(SHAPES, random.randint(2, 4))
-    plotB_shapes = random.sample(SHAPES, random.randint(2, 4))
-    high_corr_plot = random.choice(["A", "B"])
-    st.session_state.saved_data[st.session_state.step] = (plotA_shapes, plotB_shapes, high_corr_plot)
-
-plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data[st.session_state.step]
-
-# --- Function to generate one plot ---
-def generate_plot(is_high_corr, shape_paths):
+# --- Plot Generation ---
+def generate_scatterplot(is_high_corr, shape_paths):
+    """Generate a scatterplot with given shapes and correlation level"""
     fig, ax = plt.subplots(figsize=(4, 4))
+    
+    # Generate data points for each shape
     for shape_path in shape_paths:
         mean = np.random.uniform(0.3, 1.2, 2)
-        cov = [[0.02, 0.015], [0.015, 0.02]] if is_high_corr else [[0.02, 0], [0, 0.02]]
+        
+        # Different covariance matrices for high/low correlation
+        if is_high_corr:
+            cov = [[0.02, 0.015], [0.015, 0.02]]  # High correlation
+        else:
+            cov = [[0.02, 0], [0, 0.02]]  # Low correlation
+            
         data = np.random.multivariate_normal(mean, cov, 20)
+        
+        # Load and resize shape image
         img = Image.open(shape_path).convert("RGBA").resize((20, 20))
         im = OffsetImage(img, zoom=1.0)
+        
+        # Plot each data point with the shape
         for x, y in data:
             ab = AnnotationBbox(im, (x, y), frameon=False)
             ax.add_artist(ab)
+    
+    # Configure plot appearance
     ax.set_xlim(0, 1.6)
     ax.set_ylim(0, 1.6)
     ax.axhline(0.8, color='gray', linestyle='--', linewidth=0.5)
@@ -88,41 +80,113 @@ def generate_plot(is_high_corr, shape_paths):
     ax.set_yticks([])
     return fig
 
-# --- Plot A & B ---
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown("**Plot A**")
-    figA = generate_plot(is_high_corr=(high_corr_plot == "A"), shape_paths=plotA_shapes)
-    st.pyplot(figA)
-with col2:
-    st.markdown("**Plot B**")
-    figB = generate_plot(is_high_corr=(high_corr_plot == "B"), shape_paths=plotB_shapes)
-    st.pyplot(figB)
+# --- Session State Initialization ---
+def init_session_state():
+    if 'step' not in st.session_state:
+        st.session_state.step = 0
+        st.session_state.saved_data = [None] * TOTAL_TASKS
+        st.session_state.start_time = datetime.now()
+        st.session_state.responses = []
 
-# --- Input ---
-choice = st.radio("💡 Menurut Anda, plot mana yang lebih berkorelasi?", ["A", "B"], index=None)
-
-if st.button("🚀 Submit Jawaban"):
-    if choice:
-        benar = choice == high_corr_plot
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if MODE == "Eksperimen":
-            row = [
-                timestamp,
-                st.session_state.step + 1,
-                MODE,
-                choice,
-                high_corr_plot,
-                "Benar" if benar else "Salah",
-                ", ".join([os.path.splitext(os.path.basename(p))[0] for p in plotA_shapes]),
-                ", ".join([os.path.splitext(os.path.basename(p))[0] for p in plotB_shapes])
-            ]
+# --- Main App ---
+def main():
+    # Initialize app components
+    sheet = init_google_sheets()
+    shapes = load_shapes()
+    init_session_state()
+    
+    if not shapes:
+        st.stop()
+    
+    # Handle experiment completion
+    if st.session_state.step >= TOTAL_TASKS:
+        st.balloons()
+        st.success("🎉 Experiment completed! Thank you for participating.")
+        
+        if st.button("Restart Experiment"):
+            st.session_state.step = 0
+            st.session_state.saved_data = [None] * TOTAL_TASKS
+            st.experimental_rerun()
+        return
+    
+    # Determine current mode (training or actual experiment)
+    is_training = st.session_state.step < TRAINING_TASKS
+    current_mode = "Training" if is_training else "Experiment"
+    
+    # Display progress
+    st.title("Shape Correlation Perception Experiment")
+    st.subheader(f"{current_mode} Task {st.session_state.step + 1}/{TOTAL_TASKS}")
+    st.progress((st.session_state.step + 1) / TOTAL_TASKS)
+    
+    # Generate or retrieve current task
+    if st.session_state.saved_data[st.session_state.step] is None:
+        plotA_shapes = random.sample(shapes, random.randint(2, 4))
+        plotB_shapes = random.sample(shapes, random.randint(2, 4))
+        high_corr_plot = random.choice(["A", "B"])
+        st.session_state.saved_data[st.session_state.step] = (plotA_shapes, plotB_shapes, high_corr_plot)
+    
+    plotA_shapes, plotB_shapes, high_corr_plot = st.session_state.saved_data[st.session_state.step]
+    
+    # Display the two plots
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Plot A**")
+        figA = generate_scatterplot(high_corr_plot == "A", plotA_shapes)
+        st.pyplot(figA)
+    
+    with col2:
+        st.markdown("**Plot B**")
+        figB = generate_scatterplot(high_corr_plot == "B", plotB_shapes)
+        st.pyplot(figB)
+    
+    # User response
+    choice = st.radio("Which plot shows higher correlation?", ["A", "B"], index=None)
+    
+    if st.button("Submit Answer"):
+        if not choice:
+            st.warning("Please select an answer before submitting.")
+            return
+        
+        # Calculate response metrics
+        is_correct = choice == high_corr_plot
+        response_time = (datetime.now() - st.session_state.start_time).total_seconds()
+        
+        # Store response
+        response_data = {
+            "task_number": st.session_state.step + 1,
+            "mode": current_mode,
+            "choice": choice,
+            "correct_answer": high_corr_plot,
+            "is_correct": is_correct,
+            "response_time": response_time,
+            "plotA_shapes": [os.path.basename(p) for p in plotA_shapes],
+            "plotB_shapes": [os.path.basename(p) for p in plotB_shapes],
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        # Save to Google Sheets (only for actual experiment)
+        if not is_training and sheet:
             try:
-                sheet.append_row(row)
+                sheet.append_row(list(response_data.values()))
             except Exception as e:
-                st.warning(f"Gagal menyimpan ke Google Sheets: {e}")
-
+                st.error(f"Failed to save data: {str(e)}")
+        
+        # Store in session
+        st.session_state.responses.append(response_data)
+        
+        # Provide feedback during training
+        if is_training:
+            if is_correct:
+                st.success("✅ Correct! This is a training example.")
+            else:
+                st.error(f"❌ Not quite right. The correct answer was {high_corr_plot}.")
+            
+            st.info("This was a training example. The actual experiment will begin next.")
+        
+        # Move to next task
         st.session_state.step += 1
+        st.session_state.start_time = datetime.now()
         st.experimental_rerun()
-    else:
-        st.warning("❗️ Pilih salah satu opsi terlebih dahulu.")
+
+if __name__ == "__main__":
+    main()
