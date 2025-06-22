@@ -41,7 +41,6 @@ SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.end
 if "step" not in st.session_state:
     st.session_state.step = 0
     st.session_state.responses = []
-    st.session_state.saved_data = None
 
 # Reset after 54 trials
 if st.session_state.step >= 54:
@@ -55,7 +54,7 @@ st.title("🔍 Berdasarkan Bentuk")
 st.subheader(f"{MODE} #{st.session_state.step + 1} dari {TOTAL_TASKS}")
 
 # --- Freeze Soal ---
-if st.session_state.saved_data is None:
+if "saved_data" not in st.session_state or st.session_state.saved_data is None:
     plotA_shapes = random.sample(SHAPES, random.randint(2, 4))
     plotB_shapes = random.sample(SHAPES, random.randint(2, 4))
     high_corr_plot = random.choice(["A", "B"])
@@ -119,6 +118,6 @@ if st.button("🚀 Submit Jawaban"):
 
         st.session_state.step += 1
         st.session_state.saved_data = None
-        st.rerun()
+        st.experimental_rerun()
     else:
         st.warning("❗️ Pilih salah satu opsi terlebih dahulu.")
