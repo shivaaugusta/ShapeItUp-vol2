@@ -83,7 +83,7 @@ y2 = st.session_state[f"y2_{index}"]
 # --- Scatterplot A ---
 fig, axs = plt.subplots(1, 2, figsize=(8, 4))
 for i, shape in enumerate(shapes):
-    img = Image.open(shape).convert("RGBA").resize((20, 20))
+    img = Image.open(shape).convert("RGBA").resize((15, 15))
     im = OffsetImage(img, zoom=1.0)
     for x, y in zip(x1[i], y1[i]):
         ab = AnnotationBbox(im, (x, y), frameon=False)
