@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Final with Unique Shape Labels) ---
+# --- Streamlit App for Experiment 4 (Revised with Variable Shape Count) ---
 import streamlit as st
 import os
 import random
@@ -36,22 +36,18 @@ LABEL_MAP = {
 }
 
 ROOT_FOLDER = "Shapes-All"
-ALL_SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
+SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.endswith(".png")]
 
-def get_unique_shape_paths(n):
-    shape_dict = {}
-    for path in ALL_SHAPES:
-        raw = os.path.splitext(os.path.basename(path))[0]
-        label = LABEL_MAP.get(raw)
-        if label and label not in shape_dict:
-            shape_dict[label] = path
-    return random.sample(list(shape_dict.values()), n)
-
-# --- Init session ---
 if "step" not in st.session_state:
     st.session_state.step = 0
     st.session_state.responses = []
     st.session_state.shuffle_plot = random.choice([True, False])
+
+# Shape counts for 54 trials (18 each for 2, 3, and 4 shapes)
+if "shape_counts" not in st.session_state:
+    counts = [2] * 18 + [3] * 18 + [4] * 18
+    random.shuffle(counts)
+    st.session_state.shape_counts = counts
 
 st.title("🔍 Berdasarkan Bentuk")
 st.subheader(f"Eksperimen #{st.session_state.step + 1} dari 54")
@@ -59,12 +55,10 @@ st.subheader(f"Eksperimen #{st.session_state.step + 1} dari 54")
 # --- Function to generate one plot ---
 def generate_plot(is_high_corr, shape_paths):
     fig, ax = plt.subplots()
-    all_data = []
     for shape_path in shape_paths:
         mean = np.random.uniform(0.3, 1.2, 2)
         cov = [[0.02, 0.015], [0.015, 0.02]] if is_high_corr else [[0.02, 0], [0, 0.02]]
         data = np.random.multivariate_normal(mean, cov, 20)
-        all_data.extend(data)
         img = Image.open(shape_path).convert("RGBA").resize((20, 20))
         im = OffsetImage(img, zoom=1.0)
         for x, y in data:
@@ -76,9 +70,10 @@ def generate_plot(is_high_corr, shape_paths):
     ax.set_yticks([])
     return fig, shape_paths
 
-# --- Generate two plots with unique shape labels ---
-plotA_shapes = get_unique_shape_paths(3)
-plotB_shapes = get_unique_shape_paths(3)
+# --- Generate two plots with dynamic shape count ---
+num_shapes = st.session_state.shape_counts[st.session_state.step]
+plotA_shapes = random.sample(SHAPES, num_shapes)
+plotB_shapes = random.sample(SHAPES, num_shapes)
 high_corr_plot = random.choice(["A", "B"])
 
 figA, used_shapes_A = generate_plot(is_high_corr=(high_corr_plot == "A"), shape_paths=plotA_shapes)
@@ -107,14 +102,14 @@ if st.button("🚀 Submit Jawaban"):
             "Benar" if benar else "Salah",
             ", ".join([os.path.splitext(os.path.basename(p))[0] for p in used_shapes_A]),
             ", ".join([os.path.splitext(os.path.basename(p))[0] for p in used_shapes_B]),
-            len(used_shapes_A)
+            num_shapes
         ]
         try:
             sheet.append_row(row)
         except Exception as e:
             st.warning(f"Gagal menyimpan ke Google Sheets: {e}")
         st.session_state.step += 1
-        st.rerun()
+        st.experimental_rerun()
     else:
         st.warning("❗ Pilih salah satu opsi terlebih dahulu.")
 
