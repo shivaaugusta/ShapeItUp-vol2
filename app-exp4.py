@@ -1,4 +1,4 @@
-# --- Streamlit App for Experiment 4 (Revised with Variable Shape Count) ---
+# --- Streamlit App for Experiment 4 (Revised with Controls & Freeze) ---
 import streamlit as st
 import os
 import random
@@ -41,43 +41,48 @@ SHAPES = [os.path.join(ROOT_FOLDER, f) for f in os.listdir(ROOT_FOLDER) if f.end
 if "step" not in st.session_state:
     st.session_state.step = 0
     st.session_state.responses = []
-    st.session_state.shuffle_plot = random.choice([True, False])
-
-# Shape counts for 54 trials (18 each for 2, 3, and 4 shapes)
-if "shape_counts" not in st.session_state:
-    counts = [2] * 18 + [3] * 18 + [4] * 18
-    random.shuffle(counts)
-    st.session_state.shape_counts = counts
+    st.session_state.plots = []
+    st.session_state.choices = []
 
 st.title("🔍 Berdasarkan Bentuk")
 st.subheader(f"Eksperimen #{st.session_state.step + 1} dari 54")
 
-# --- Function to generate one plot ---
-def generate_plot(is_high_corr, shape_paths):
-    fig, ax = plt.subplots()
-    for shape_path in shape_paths:
-        mean = np.random.uniform(0.3, 1.2, 2)
-        cov = [[0.02, 0.015], [0.015, 0.02]] if is_high_corr else [[0.02, 0], [0, 0.02]]
-        data = np.random.multivariate_normal(mean, cov, 20)
-        img = Image.open(shape_path).convert("RGBA").resize((20, 20))
-        im = OffsetImage(img, zoom=1.0)
-        for x, y in data:
-            ab = AnnotationBbox(im, (x, y), frameon=False)
-            ax.add_artist(ab)
-    ax.set_xlim(0, 1.6)
-    ax.set_ylim(0, 1.6)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    return fig, shape_paths
+# --- Generate data once per step ---
+if len(st.session_state.plots) <= st.session_state.step:
+    def generate_plot(is_high_corr, shape_paths):
+        fig, ax = plt.subplots(figsize=(4, 4))
+        for shape_path in shape_paths:
+            mean = np.random.uniform(0.4, 1.1, 2)
+            cov = [[0.02, 0.015], [0.015, 0.02]] if is_high_corr else [[0.02, 0], [0, 0.02]]
+            data = np.random.multivariate_normal(mean, cov, 20)
+            img = Image.open(shape_path).convert("RGBA").resize((20, 20))
+            im = OffsetImage(img, zoom=1.0)
+            for x, y in data:
+                ab = AnnotationBbox(im, (x, y), frameon=False)
+                ax.add_artist(ab)
+        ax.set_xlim(0, 1.6)
+        ax.set_ylim(0, 1.6)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.axhline(0.8, color='lightgray', linestyle='--', linewidth=1)
+        ax.axvline(0.8, color='lightgray', linestyle='--', linewidth=1)
+        return fig
 
-# --- Generate two plots with dynamic shape count ---
-num_shapes = st.session_state.shape_counts[st.session_state.step]
-plotA_shapes = random.sample(SHAPES, num_shapes)
-plotB_shapes = random.sample(SHAPES, num_shapes)
-high_corr_plot = random.choice(["A", "B"])
+    num_shapes = random.randint(2, 4)
+    plotA_shapes = random.sample(SHAPES, num_shapes)
+    plotB_shapes = random.sample(SHAPES, num_shapes)
+    high_corr_plot = random.choice(["A", "B"])
 
-figA, used_shapes_A = generate_plot(is_high_corr=(high_corr_plot == "A"), shape_paths=plotA_shapes)
-figB, used_shapes_B = generate_plot(is_high_corr=(high_corr_plot == "B"), shape_paths=plotB_shapes)
+    st.session_state.plots.append({
+        "A": plotA_shapes,
+        "B": plotB_shapes,
+        "answer": high_corr_plot
+    })
+
+# --- Load state data ---
+data = st.session_state.plots[st.session_state.step]
+figA = generate_plot(is_high_corr=(data["answer"] == "A"), shape_paths=data["A"])
+figB = generate_plot(is_high_corr=(data["answer"] == "B"), shape_paths=data["B"])
 
 col1, col2 = st.columns(2)
 with col1:
@@ -87,22 +92,21 @@ with col2:
     st.markdown("**Plot B**")
     st.pyplot(figB)
 
-# --- User Input ---
-choice = st.radio("💡 Menurut Anda, plot mana yang lebih berkorelasi?", ["A", "B"], index=None)
+choice = st.radio("💡 Menurut Anda, plot mana yang lebih berkorelasi?", ["A", "B"], key=f"choice_{st.session_state.step}")
 
 if st.button("🚀 Submit Jawaban"):
     if choice:
-        benar = choice == high_corr_plot
+        benar = choice == data["answer"]
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         row = [
             timestamp,
             st.session_state.step + 1,
             choice,
-            high_corr_plot,
+            data["answer"],
             "Benar" if benar else "Salah",
-            ", ".join([os.path.splitext(os.path.basename(p))[0] for p in used_shapes_A]),
-            ", ".join([os.path.splitext(os.path.basename(p))[0] for p in used_shapes_B]),
-            num_shapes
+            ", ".join([os.path.splitext(os.path.basename(p))[0] for p in data["A"]]),
+            ", ".join([os.path.splitext(os.path.basename(p))[0] for p in data["B"]]),
+            len(data["A"])
         ]
         try:
             sheet.append_row(row)
@@ -115,4 +119,5 @@ if st.button("🚀 Submit Jawaban"):
 
 if st.session_state.step >= 54:
     st.success("✅ Eksperimen selesai! Terima kasih atas partisipasinya.")
+    st.balloons()
     st.stop()
