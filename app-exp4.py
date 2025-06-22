@@ -121,4 +121,4 @@ if st.button("🚀 Submit Jawaban"):
         st.session_state.saved_data = None
         st.experimental_rerun()
     else:
-        st.warning("❗ Pilih salah satu opsi terlebih dahulu.")
+        st.warning("❗️ Pilih salah satu opsi terlebih dahulu.")
