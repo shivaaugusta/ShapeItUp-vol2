@@ -66,7 +66,7 @@ def generate_scatterplot(is_high_corr, shape_paths, seed):
                 
             data = np.random.multivariate_normal(mean, cov, 20)
             
-            img = Image.open(shape_path).convert("RGBA").resize((15, 15))
+            img = Image.open(shape_path).convert("RGBA").resize((12, 12))
             im = OffsetImage(img, zoom=1.0)
             
             for x, y in data:
