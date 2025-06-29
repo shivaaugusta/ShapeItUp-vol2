@@ -78,6 +78,14 @@ def collect_unique_shapes():
     return list(shape_dict.values())
 
 SHAPE_POOL = collect_unique_shapes()
+counts = {"filled": 0, "unfilled": 0, "open": 0}
+for shape_path in SHAPE_POOL:
+    raw = os.path.splitext(os.path.basename(shape_path))[0]
+    shape_type = SHAPE_TYPE_MAP.get(raw)
+    if shape_type:
+        counts[shape_type] += 1
+st.info(f"Jumlah bentuk: {counts}")
+
 
 # --- Inisialisasi state ---
 if "task_index" not in st.session_state:
