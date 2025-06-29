@@ -159,11 +159,11 @@ if st.button("🚀 Submit Jawaban"):
     else:
         st.error(f"❌ Salah. Jawaban: Kategori {target_idx+1} ({shape_labels[target_idx]})")
 
-    if mode == "latihan" and not benar:
+    if mode == "Exercise" and not benar:
         st.warning("⚠️ Latihan harus benar untuk lanjut.")
         st.stop()
 
-    if mode == "eksperimen":
+    if mode == "Experiment":
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         row = [
             timestamp,
