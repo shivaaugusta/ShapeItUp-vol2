@@ -68,7 +68,8 @@ def collect_unique_shapes():
         for fname in os.listdir(folder):
             if fname.endswith(".png"):
                 raw = os.path.splitext(fname)[0]
-                label = LABEL_MAP.get(raw, raw)
+                # gunakan nama file langsung sebagai label unik
+                label = raw
                 if raw not in SHAPE_TYPE_MAP:
                     missing_types.add(raw)
                 if label not in shape_dict:
@@ -76,6 +77,7 @@ def collect_unique_shapes():
     if missing_types:
         st.warning(f"⚠️ Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
     return list(shape_dict.values())
+
 
 SHAPE_POOL = collect_unique_shapes()
 counts = {"filled": 0, "unfilled": 0, "open": 0}
