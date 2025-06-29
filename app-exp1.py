@@ -78,7 +78,7 @@ if "task_index" not in st.session_state:
     st.session_state.total_tasks = 53
 
 index = st.session_state.task_index
-mode = "latihan" if index < 3 else "eksperimen"
+mode = "Exercise" if index < 3 else "Experiment"
 st.title("🧠 Experiment 1: Shape Types")
 st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{index + 1 if mode == 'latihan' else index - 2 + 1}")
 
