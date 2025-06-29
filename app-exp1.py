@@ -1,4 +1,3 @@
-# --- Streamlit App Experiment 1 (Final Repro ShapeItUp) ---
 import streamlit as st
 import os
 import random
@@ -18,23 +17,6 @@ worksheet = client.open_by_key("1aZ0LjvdZs1WHGphqb_nYrvPma8xEG9mxfM-O1_fsi3g").w
 
 # --- Folder sumber ---
 ROOT_FOLDERS = ["Shapes-D3", "Shapes-Excel", "Shapes-Tableau", "Shapes-Matlab", "Shapes-R"]
-
-# --- Mapping label visual ---
-LABEL_MAP = {
-    "circle": "circle", "circle-unfilled": "circle", "circle-filled": "circle", "dot": "dot",
-    "square": "square", "square-filled": "square", "square-unfilled": "square", "square-x-open": "square-x",
-    "triangle": "triangle", "triangle-up": "triangle", "triangle-filled": "triangle", "triangle-unfilled": "triangle",
-    "triangle-downward-unfilled": "triangle-down", "downward-triangle-unfilled": "triangle-down", "triangle-down": "triangle-down",
-    "triangle-left-unfilled": "triangle-left", "triangle-right-unfilled": "triangle-right",
-    "star": "star", "star-unfilled": "star", "sixlinestar-open": "star", "star-filled": "star", "eightline-star-open": "star",
-    "plus-open": "plus", "plus-filled": "plus", "plus-unfilled": "plus",
-    "cross-open": "cross",
-    "diamond": "diamond", "diamond-filled": "diamond", "diamond-unfilled": "diamond", "diamond-plus-open": "diamond",
-    "y": "y", "y-filled": "y-filled",
-    "minus-open": "minus", "min": "minus",
-    "arrow-vertical-open": "arrow", "arrow-horizontal-open": "arrow",
-    "hexagon": "hexagon", "pentagon": "pentagon", "triangle-right": "triangle", "triangle-left": "triangle"
-}
 
 # --- Mapping shape type ---
 SHAPE_TYPE_MAP = {
@@ -61,33 +43,33 @@ SHAPE_TYPE_COMBOS = [
 # --- Kumpulkan shape unik ---
 def collect_unique_shapes():
     shape_dict = {}
-    missing_types = set()
     for folder in ROOT_FOLDERS:
         if not os.path.exists(folder):
             continue
         for fname in os.listdir(folder):
             if fname.endswith(".png"):
-                raw = os.path.splitext(fname)[0]
-                # gunakan nama file langsung sebagai label unik
-                label = raw
-                if raw not in SHAPE_TYPE_MAP:
-                    missing_types.add(raw)
+                label = os.path.splitext(fname)[0]
                 if label not in shape_dict:
                     shape_dict[label] = os.path.join(folder, fname)
-    if missing_types:
-        st.warning(f"⚠️ Bentuk belum dikenali di SHAPE_TYPE_MAP: {', '.join(sorted(missing_types))}")
-    return list(shape_dict.values())
+    return shape_dict
 
+# --- Ambil bentuk dan cek tipe ---
+shape_dict = collect_unique_shapes()
+SHAPE_POOL = list(shape_dict.values())
 
-SHAPE_POOL = collect_unique_shapes()
 counts = {"filled": 0, "unfilled": 0, "open": 0}
+unrecognized_shapes = []
 for shape_path in SHAPE_POOL:
     raw = os.path.splitext(os.path.basename(shape_path))[0]
-    shape_type = SHAPE_TYPE_MAP.get(raw)
-    if shape_type:
-        counts[shape_type] += 1
-st.info(f"Jumlah bentuk: {counts}")
+    s_type = SHAPE_TYPE_MAP.get(raw)
+    if s_type:
+        counts[s_type] += 1
+    else:
+        unrecognized_shapes.append(raw)
 
+st.info(f"Jumlah bentuk:\n• Filled: {counts['filled']}\n• Unfilled: {counts['unfilled']}\n• Open: {counts['open']}")
+if unrecognized_shapes:
+    st.warning(f"⚠️ Bentuk belum terdaftar di SHAPE_TYPE_MAP:\n{', '.join(sorted(set(unrecognized_shapes)))}")
 
 # --- Inisialisasi state ---
 if "task_index" not in st.session_state:
@@ -97,7 +79,7 @@ if "task_index" not in st.session_state:
 
 index = st.session_state.task_index
 mode = "latihan" if index < 3 else "eksperimen"
-st.title("🧠 oEksperimen 1: Estimasi Berdasarkan Bentuk")
+st.title("🧠 Eksperimen 1: Estimasi Berdasarkan Bentuk")
 st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{index + 1 if mode == 'latihan' else index - 2 + 1}")
 
 # --- Generate soal ---
@@ -129,18 +111,15 @@ if f"x_data_{index}" not in st.session_state:
     x_data = [np.random.uniform(0.0, 1.5, 20) for _ in range(N)]
     target_idx = int(np.argmax([np.mean(y) for y in y_data]))
 
-    shape_labels = []
-    for shape in chosen_shapes:
-        raw = os.path.splitext(os.path.basename(shape))[0]
-        label = LABEL_MAP.get(raw, raw)
-        shape_labels.append(label)
+    shape_labels = [os.path.splitext(os.path.basename(shape))[0] for shape in chosen_shapes]
 
     st.session_state[f"x_data_{index}"] = x_data
     st.session_state[f"y_data_{index}"] = y_data
     st.session_state[f"chosen_shapes_{index}"] = chosen_shapes
     st.session_state[f"shape_labels_{index}"] = shape_labels
     st.session_state[f"target_idx_{index}"] = target_idx
-    st.session_state[f"shape_combo_{index}"] = "+".join(sorted(set(SHAPE_TYPE_MAP.get(os.path.splitext(os.path.basename(s))[0], '') for s in chosen_shapes)))
+    st.session_state[f"shape_combo_{index}"] = "+".join(sorted(set(
+        SHAPE_TYPE_MAP.get(os.path.splitext(os.path.basename(s))[0], '') for s in chosen_shapes)))
 
 # --- Load state ---
 x_data = st.session_state[f"x_data_{index}"]
@@ -167,12 +146,11 @@ ax.set_ylabel("Y")
 ax.legend()
 st.pyplot(fig)
 
-# --- Input ---
+# --- Input dan Submit ---
 selected_label = st.selectbox("📍 Pilih kategori dengan rata-rata Y tertinggi:",
                               [f"Kategori {i+1} ({label})" for i, label in enumerate(shape_labels)])
 selected_index = int(selected_label.split()[1]) - 1
 
-# --- Submit ---
 if st.button("🚀 Submit Jawaban"):
     benar = selected_index == target_idx
     if benar:
