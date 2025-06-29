@@ -95,7 +95,7 @@ if f"x_data_{index}" not in st.session_state:
             s_type = SHAPE_TYPE_MAP.get(raw)
             if s_type in c:
                 shapes.append(shape_path)
-        if len(shapes) >= 10:
+        if len(shapes) >= 8:
             valid_shapes = shapes
             combo = c
             break
