@@ -132,7 +132,7 @@ shape_combo = st.session_state[f"shape_combo_{index}"]
 # --- Visualisasi ---
 fig, ax = plt.subplots()
 for i in range(len(chosen_shapes)):
-    img = Image.open(chosen_shapes[i]).convert("RGBA").resize((20, 20))
+    img = Image.open(chosen_shapes[i]).convert("RGBA").resize((15, 15))
     im = OffsetImage(img, zoom=1.0)
     for x, y in zip(x_data[i], y_data[i]):
         ab = AnnotationBbox(im, (x, y), frameon=False)
