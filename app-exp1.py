@@ -79,7 +79,7 @@ if "task_index" not in st.session_state:
 
 index = st.session_state.task_index
 mode = "latihan" if index < 3 else "eksperimen"
-st.title("🧠 Eksperimen 1: Estimasi Berdasarkan Bentuk")
+st.title("🧠 Experiment 1: Shape Types")
 st.subheader(f"{'🔍 Latihan' if mode == 'latihan' else '📊 Eksperimen'} #{index + 1 if mode == 'latihan' else index - 2 + 1}")
 
 # --- Generate soal ---
