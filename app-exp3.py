@@ -17,7 +17,7 @@ st.title("🧠 Eksperimen 3: Preferensi Bentuk Visualisasi")
 st.write("Silakan pilih bentuk-bentuk di bawah ini berdasarkan preferensi Anda. Mulailah dari yang paling disukai (Ranking 1) hingga yang paling tidak disukai (Ranking 10).")
 
 # --- Load Shapes ---
-SHAPE_FOLDER = "Shapes-Preference"
+SHAPE_FOLDER = "Shapes-All"
 shape_files = sorted([f for f in os.listdir(SHAPE_FOLDER) if f.endswith(".png")])
 
 if len(shape_files) != 10:
